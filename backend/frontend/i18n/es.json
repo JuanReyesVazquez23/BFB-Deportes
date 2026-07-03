@@ -1,0 +1,57 @@
+{
+  "tagline": "Béisbol · Fútbol · Basketball — todo en un mismo lugar",
+  "nav": {
+    "baseball": "Béisbol",
+    "football": "Fútbol",
+    "basketball": "Basketball",
+    "worldcup": "Mundial 2026"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "register": "Crear cuenta",
+    "logout": "Cerrar sesión",
+    "username": "Usuario",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "noAccount": "¿No tienes cuenta?",
+    "hasAccount": "¿Ya tienes cuenta?",
+    "createOne": "Regístrate",
+    "loginInstead": "Inicia sesión",
+    "points": "pts BFB"
+  },
+  "sections": {
+    "standings": "Posiciones",
+    "playersToday": "Jugadores Hoy",
+    "news": "Noticias",
+    "generalNews": "Noticias Generales",
+    "liveAndResults": "En Vivo y Resultados",
+    "upcoming": "Próximos Partidos",
+    "stats": "Estadísticas"
+  },
+  "game": {
+    "live": "En vivo",
+    "final": "Final",
+    "scheduled": "Programado",
+    "details": "Ver detalle del partido",
+    "winningPitcher": "Pitcher ganador",
+    "losingPitcher": "Pitcher perdedor",
+    "savePitcher": "Salvamento",
+    "probablePitcher": "Pitcher probable",
+    "predict": "Predice y gana puntos BFB",
+    "loginToPredict": "Inicia sesión para predecir",
+    "predicted": "Ya predijiste este partido"
+  },
+  "stats": {
+    "searchTeam": "Buscar equipo",
+    "searchPlayer": "Buscar jugador",
+    "placeholderTeam": "Escribe el nombre de un equipo...",
+    "placeholderPlayer": "Escribe el nombre de un jugador..."
+  },
+  "common": {
+    "comingSoon": "Esta liga se activará al configurar su fuente de datos (API key). La estructura ya está lista.",
+    "loading": "Cargando...",
+    "error": "Ocurrió un error al cargar la información.",
+    "readMore": "Leer en ESPN",
+    "source": "Fuente"
+  }
+}

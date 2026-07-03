@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BFB Deportes — Béisbol, Fútbol y Basketball</title>
+  <meta name="description" content="Béisbol, Fútbol y Basketball, todo en un mismo lugar. Posiciones, jugadores, noticias y resultados en vivo.">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Barra superior: idioma + estado de usuario -->
+  <div class="topbar">
+    <div class="container">
+      <select id="lang-select" class="lang-select" aria-label="Idioma / Language">
+        <option value="es">ES</option>
+        <option value="en">EN</option>
+      </select>
+      <div class="user-status" id="user-status"></div>
+    </div>
+  </div>
+
+  <!-- Cabecera: marca y navegación por deporte -->
+  <header class="header">
+    <div class="container">
+      <div class="brand-row">
+        <div class="brand">
+          <h1>BFB <span>DEPORTES</span></h1>
+          <p class="tagline" data-i18n="tagline">Béisbol · Fútbol · Basketball — todo en un mismo lugar</p>
+        </div>
+      </div>
+      <nav class="sport-tabs" aria-label="Selección de deporte">
+        <button class="sport-tab active" data-sport="baseball" data-i18n="nav.baseball">Béisbol</button>
+        <button class="sport-tab" data-sport="football" data-i18n="nav.football">Fútbol</button>
+        <button class="sport-tab" data-sport="basketball" data-i18n="nav.basketball">Basketball</button>
+        <button class="sport-tab" data-sport="worldcup" data-i18n="nav.worldcup">Mundial 2026</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Ticker en vivo -->
+  <div class="live-ticker" aria-label="Marcadores en vivo">
+    <div class="live-ticker-track" id="ticker-track"></div>
+  </div>
+
+  <main class="container">
+
+    <!-- Posiciones -->
+    <section class="section">
+      <h2 class="section-title" data-i18n="sections.standings">Posiciones</h2>
+      <div id="standings-container"></div>
+    </section>
+
+    <!-- Jugadores hoy + Noticias -->
+    <section class="section">
+      <div class="grid-3">
+        <div>
+          <h2 class="section-title" data-i18n="sections.playersToday">Jugadores Hoy</h2>
+          <div class="card" id="players-today-container"></div>
+        </div>
+        <div style="grid-column: span 2;">
+          <h2 class="section-title" data-i18n="sections.generalNews">Noticias Generales</h2>
+          <div class="grid-3" id="news-container"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Partidos: en vivo, resultados y próximos con predicción -->
+    <section class="section">
+      <h2 class="section-title">
+        <span data-i18n="sections.liveAndResults">En Vivo y Resultados</span>
+        <small data-i18n="game.predict">Predice y gana puntos BFB</small>
+      </h2>
+      <div id="games-container"></div>
+    </section>
+
+    <!-- Estadísticas -->
+    <section class="section">
+      <h2 class="section-title" data-i18n="sections.stats">Estadísticas</h2>
+      <form id="stats-form" class="stats-search">
+        <select id="stats-type" aria-label="Tipo de estadística">
+          <option value="team" data-i18n="stats.searchTeam">Buscar equipo</option>
+          <option value="player" data-i18n="stats.searchPlayer">Buscar jugador</option>
+        </select>
+        <input type="number" id="stats-id" placeholder="ID del equipo o jugador" min="1" required>
+        <button type="submit" class="btn btn-primary">Buscar</button>
+      </form>
+      <pre class="stats-result" id="stats-result"></pre>
+    </section>
+
+  </main>
+
+  <footer class="footer container">
+    <span><span class="bfb-word">BFB</span> Deportes — datos reales vía MLB Stats API, balldontlie.io y ESPN.</span>
+    <span>© 2026</span>
+  </footer>
+
+  <!-- Modal de autenticación -->
+  <div class="modal-backdrop hidden" id="auth-modal-backdrop">
+    <div class="modal">
+      <button class="modal-close" id="auth-modal-close" aria-label="Cerrar">&times;</button>
+      <h2 id="auth-title">Iniciar sesión</h2>
+      <p class="modal-sub">BFB Deportes</p>
+      <form id="auth-form" data-mode="login">
+        <div class="field">
+          <label data-i18n="auth.username">Usuario</label>
+          <input type="text" id="auth-username" required minlength="3" maxlength="20" autocomplete="username">
+        </div>
+        <div class="field hidden" id="email-field">
+          <label data-i18n="auth.email">Correo electrónico</label>
+          <input type="email" id="auth-email" autocomplete="email">
+        </div>
+        <div class="field">
+          <label data-i18n="auth.password">Contraseña</label>
+          <input type="password" id="auth-password" required minlength="8" autocomplete="current-password">
+        </div>
+        <p class="form-error" id="auth-error"></p>
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary" id="auth-submit-btn">Iniciar sesión</button>
+        </div>
+      </form>
+      <p class="modal-switch">
+        <span id="auth-switch-text">¿No tienes cuenta?</span>
+        <button id="auth-switch-btn" type="button">Regístrate</button>
+      </p>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

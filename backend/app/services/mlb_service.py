@@ -1,0 +1,95 @@
+"""
+Cliente para la MLB Stats API oficial (https://statsapi.mlb.com).
+
+Es una API pública, gratuita y sin necesidad de API key. Se usa como fuente
+principal para la liga MLB (deporte: béisbol), incluyendo detalle de
+pitchers abridores y ganadores/perdedores por juego.
+
+Todas las funciones son async y usan httpx.AsyncClient. Los datos crudos
+se devuelven como dicts (JSON) y son transformados/guardados en la capa de
+sincronización (ver app/services/sync_service.py).
+"""
+from datetime import date
+
+import httpx
+
+from app.core.config import settings
+
+MLB_SPORT_ID = 1  # id interno de MLB en statsapi.mlb.com (Grandes Ligas)
+TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+
+
+async def get_standings(season: int) -> dict:
+    """Posiciones actuales de la MLB por división."""
+    url = f"{settings.MLB_STATS_API_BASE}/standings"
+    params = {"leagueId": "103,104", "season": season, "standingsTypes": "regularSeason"}
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        resp = await client.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+
+async def get_schedule(target_date: date) -> dict:
+    """
+    Calendario/resultados del día indicado. Incluye pitchers probables y,
+    si el juego ya inició/terminó, el linescore básico.
+    """
+    url = f"{settings.MLB_STATS_API_BASE}/schedule"
+    params = {
+        "sportId": MLB_SPORT_ID,
+        "date": target_date.isoformat(),
+        "hydrate": "team,linescore,probablePitcher,decisions",
+    }
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        resp = await client.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+
+async def get_live_feed(game_pk: int) -> dict:
+    """
+    Feed en vivo/boxscore completo de un juego: pitcher ganador, perdedor,
+    salvamento, líderes ofensivos, etc. game_pk es el id de juego de MLB.
+    """
+    url = f"{settings.MLB_STATS_API_BASE.replace('/api/v1', '')}/api/v1.1/game/{game_pk}/feed/live"
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        return resp.json()
+
+
+async def get_teams(season: int) -> dict:
+    url = f"{settings.MLB_STATS_API_BASE}/teams"
+    params = {"sportId": MLB_SPORT_ID, "season": season}
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        resp = await client.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+
+async def get_team_roster(team_id: int, season: int) -> dict:
+    url = f"{settings.MLB_STATS_API_BASE}/teams/{team_id}/roster"
+    params = {"season": season}
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        resp = await client.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+
+def extract_probable_pitchers(schedule_game: dict) -> dict:
+    """Extrae de un juego del /schedule los pitchers abridores probables (para 'Jugadores Hoy')."""
+    probables = schedule_game.get("teams", {})
+    return {
+        "home_pitcher": probables.get("home", {}).get("probablePitcher", {}).get("fullName"),
+        "away_pitcher": probables.get("away", {}).get("probablePitcher", {}).get("fullName"),
+    }
+
+
+def extract_decisions(schedule_game: dict) -> dict:
+    """Extrae pitcher ganador/perdedor/salvamento de un juego ya finalizado."""
+    decisions = schedule_game.get("decisions", {})
+    return {
+        "winning_pitcher": decisions.get("winner", {}).get("fullName"),
+        "losing_pitcher": decisions.get("loser", {}).get("fullName"),
+        "save_pitcher": decisions.get("save", {}).get("fullName"),
+    }

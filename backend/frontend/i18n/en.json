@@ -1,0 +1,57 @@
+{
+  "tagline": "Baseball · Football · Basketball — all in one place",
+  "nav": {
+    "baseball": "Baseball",
+    "football": "Football",
+    "basketball": "Basketball",
+    "worldcup": "World Cup 2026"
+  },
+  "auth": {
+    "login": "Log in",
+    "register": "Sign up",
+    "logout": "Log out",
+    "username": "Username",
+    "email": "Email",
+    "password": "Password",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "createOne": "Sign up",
+    "loginInstead": "Log in",
+    "points": "BFB pts"
+  },
+  "sections": {
+    "standings": "Standings",
+    "playersToday": "Players Today",
+    "news": "News",
+    "generalNews": "General News",
+    "liveAndResults": "Live & Results",
+    "upcoming": "Upcoming Games",
+    "stats": "Statistics"
+  },
+  "game": {
+    "live": "Live",
+    "final": "Final",
+    "scheduled": "Scheduled",
+    "details": "View game details",
+    "winningPitcher": "Winning pitcher",
+    "losingPitcher": "Losing pitcher",
+    "savePitcher": "Save",
+    "probablePitcher": "Probable pitcher",
+    "predict": "Predict and earn BFB points",
+    "loginToPredict": "Log in to predict",
+    "predicted": "You already predicted this game"
+  },
+  "stats": {
+    "searchTeam": "Search team",
+    "searchPlayer": "Search player",
+    "placeholderTeam": "Type a team name...",
+    "placeholderPlayer": "Type a player name..."
+  },
+  "common": {
+    "comingSoon": "This league will activate once its data source (API key) is configured. The structure is already built.",
+    "loading": "Loading...",
+    "error": "Something went wrong while loading data.",
+    "readMore": "Read on ESPN",
+    "source": "Source"
+  }
+}
