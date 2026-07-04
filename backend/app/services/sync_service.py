@@ -15,11 +15,12 @@ from datetime import date, datetime, timezone
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.prediction import Prediction
 from app.models.sport import Game, League, NewsArticle, Sport, Team
 from app.models.user import User
-from app.services import mlb_service, news_service
+from app.services import balldontlie_service, mlb_service, news_service
 from app.services.probability_service import estimate_home_win_probability, points_for_prediction
 
 logger = logging.getLogger("bfb.sync")
@@ -50,12 +51,15 @@ def _get_or_create_league(db: Session, sport: Sport, key: str, name: str, provid
 
 
 def ensure_base_catalog(db: Session) -> None:
-    """Crea los deportes y la liga MLB si todavía no existen (idempotente)."""
+    """Crea los deportes y las ligas principales si todavía no existen (idempotente)."""
     baseball = _get_or_create_sport(db, "baseball", "Béisbol", "Baseball")
-    _get_or_create_sport(db, "football", "Fútbol", "Football")
-    _get_or_create_sport(db, "basketball", "Basketball", "Basketball")
+    football = _get_or_create_sport(db, "football", "Fútbol", "Football")
+    basketball = _get_or_create_sport(db, "basketball", "Basketball", "Basketball")
 
     _get_or_create_league(db, baseball, "mlb", "MLB", provider="mlb_stats_api", is_primary=True)
+    _get_or_create_league(db, basketball, "nba", "NBA", provider="balldontlie", is_primary=True)
+    _get_or_create_league(db, football, "epl", "Premier League", provider="balldontlie", is_primary=True)
+    _get_or_create_league(db, football, "world_cup", "Mundial 2026", provider="balldontlie", is_primary=False)
 
 
 async def sync_mlb_teams_and_standings() -> None:
@@ -67,10 +71,18 @@ async def sync_mlb_teams_and_standings() -> None:
             return
 
         standings_data = await mlb_service.get_standings(CURRENT_MLB_SEASON)
+
+        # El endpoint de standings solo trae "name" (nombre completo, ej.
+        # "New York Yankees"). Para el nombre corto ("Yankees"), la
+        # abreviación ("NYY") y la ciudad, se necesita el endpoint /teams.
+        teams_data = await mlb_service.get_teams(CURRENT_MLB_SEASON)
+        team_details_by_id = {str(t["id"]): t for t in teams_data.get("teams", [])}
+
         for record in standings_data.get("records", []):
             for team_record in record.get("teamRecords", []):
                 team_info = team_record["team"]
                 external_id = str(team_info["id"])
+                details = team_details_by_id.get(external_id, {})
 
                 team = (
                     db.query(Team)
@@ -85,6 +97,12 @@ async def sync_mlb_teams_and_standings() -> None:
                 losses = team_record.get("losses", 0)
                 total = wins + losses
                 team.name = team_info["name"]
+                team.short_name = details.get("teamName")  # ej. "Yankees"
+                team.abbreviation = details.get("abbreviation")  # ej. "NYY"
+                team.city = details.get("locationName")  # ej. "New York"
+                # Logo oficial de MLB: patrón de CDN público y estable, confirmado
+                # contra datos reales usados por la propia comunidad de MLB.
+                team.logo_url = f"https://www.mlbstatic.com/team-logos/{external_id}.svg"
                 team.wins = wins
                 team.losses = losses
                 team.win_pct = round(wins / total, 3) if total else 0.0
@@ -174,6 +192,249 @@ async def sync_mlb_games(target_date: date | None = None) -> None:
         db.close()
 
 
+def _interpret_basketball_status(raw_status: str) -> tuple[str, str | None]:
+    """
+    Traduce el campo "status" de balldontlie (NBA/WNBA/NCAAB) a nuestro
+    estado interno. Confirmado con ejemplos reales de su documentación:
+    - "Final" -> partido terminado.
+    - Una fecha/hora ISO (ej. "2025-12-08T00:00:00Z") -> el partido no ha
+      empezado; ese valor es la hora de inicio, no un estado.
+    - Cualquier otro texto (ej. "2nd Qtr", "Halftime") -> en vivo, y ya
+      viene en formato legible para mostrarlo tal cual.
+    """
+    if raw_status == "Final":
+        return "final", None
+    try:
+        datetime.fromisoformat(raw_status.replace("Z", "+00:00"))
+        return "scheduled", None
+    except (ValueError, AttributeError):
+        return "live", raw_status
+
+
+def _interpret_soccer_status(raw_status: str, status_detail: str | None) -> tuple[str, str | None]:
+    """
+    Traduce el campo "status" de balldontlie (fútbol) a nuestro estado
+    interno. Confirmado: "STATUS_FULL_TIME" -> terminado. Los valores para
+    "programado" y "en vivo" no están 100% confirmados en la documentación
+    pública, así que se usa una coincidencia por texto tolerante: cualquier
+    estado que no sea claramente "final" ni "programado" se trata como en
+    vivo, mostrando status_detail (ej. "45'", "HT") si viene disponible.
+    """
+    if "FULL_TIME" in raw_status or "FINAL" in raw_status:
+        return "final", None
+    if "SCHEDULED" in raw_status or not raw_status:
+        return "scheduled", None
+    return "live", status_detail or raw_status
+
+
+async def sync_basketball_league(league_key: str) -> None:
+    """
+    Sincroniza equipos y partidos de hoy de una liga de basketball vía
+    balldontlie (NBA confirmado con alta confianza contra ejemplos reales
+    de su documentación; WNBA/NCAAB deberían compartir la misma forma de
+    respuesta al ser productos de la misma familia).
+
+    Nota: no se sincronizan posiciones de temporada completa todavía (el
+    endpoint /standings de balldontlie no se pudo confirmar con la misma
+    certeza). Mientras tanto, la probabilidad de victoria usa 50/50 por
+    defecto para estos equipos, igual que si no hubiera historial.
+    """
+    db = SessionLocal()
+    try:
+        league = db.query(League).filter(League.key == league_key).first()
+        if not league:
+            logger.warning("Liga '%s' no existe en la BD; ejecuta ensure_base_catalog primero.", league_key)
+            return
+
+        try:
+            teams_data = await balldontlie_service.get_teams(league_key)
+            for team_info in teams_data.get("data", []):
+                external_id = str(team_info["id"])
+                team = (
+                    db.query(Team)
+                    .filter(Team.league_id == league.id, Team.external_id == external_id)
+                    .first()
+                )
+                if not team:
+                    team = Team(
+                        league_id=league.id,
+                        external_id=external_id,
+                        name=team_info.get("full_name") or team_info.get("name", ""),
+                    )
+                    db.add(team)
+                team.name = team_info.get("full_name") or team.name
+                team.short_name = team_info.get("name")  # ej. "Knicks"
+                team.abbreviation = team_info.get("abbreviation")
+                team.city = team_info.get("city")
+                team.conference = team_info.get("conference")
+                team.division = team_info.get("division")
+                # Logo: sin CDN confirmado todavía para esta liga (ver nota en
+                # balldontlie_service.py); se deja sin definir a propósito.
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("No se pudieron sincronizar equipos de '%s'.", league_key)
+
+        try:
+            target_date = datetime.now(timezone.utc).date()
+            games_data = await balldontlie_service.get_games(league_key, target_date)
+            for game_data in games_data.get("data", []):
+                external_id = str(game_data["id"])
+                home_info = game_data["home_team"]
+                away_info = game_data["visitor_team"]
+
+                home_team = (
+                    db.query(Team)
+                    .filter(Team.league_id == league.id, Team.external_id == str(home_info["id"]))
+                    .first()
+                )
+                away_team = (
+                    db.query(Team)
+                    .filter(Team.league_id == league.id, Team.external_id == str(away_info["id"]))
+                    .first()
+                )
+                if not home_team or not away_team:
+                    continue
+
+                game = (
+                    db.query(Game)
+                    .filter(Game.league_id == league.id, Game.external_id == external_id)
+                    .first()
+                )
+                raw_datetime = game_data.get("datetime") or game_data.get("date", "")
+                try:
+                    start_time = datetime.fromisoformat(raw_datetime.replace("Z", "+00:00"))
+                except ValueError:
+                    start_time = datetime.now(timezone.utc)
+
+                if not game:
+                    game = Game(
+                        league_id=league.id,
+                        external_id=external_id,
+                        home_team_id=home_team.id,
+                        away_team_id=away_team.id,
+                        start_time=start_time,
+                    )
+                    db.add(game)
+
+                status, period_status = _interpret_basketball_status(str(game_data.get("status", "")))
+                game.status = status
+                game.period_status = period_status
+                game.home_score = game_data.get("home_team_score")
+                game.away_score = game_data.get("visitor_team_score")
+
+                if game.status == "scheduled" and game.home_win_probability is None:
+                    game.home_win_probability = estimate_home_win_probability(
+                        home_team.win_pct or 0.5, away_team.win_pct or 0.5
+                    )
+                game.last_synced_at = datetime.now(timezone.utc)
+
+            db.commit()
+            logger.info("Partidos de '%s' sincronizados.", league_key)
+        except Exception:
+            db.rollback()
+            logger.exception("No se pudieron sincronizar partidos de '%s'.", league_key)
+    finally:
+        db.close()
+
+
+async def sync_soccer_league(league_key: str) -> None:
+    """
+    Sincroniza equipos y partidos ("matches") de hoy de una liga de fútbol
+    vía balldontlie. A diferencia de basketball, los partidos solo traen
+    home_team_id/away_team_id (sin el equipo embebido), por eso los
+    equipos deben sincronizarse primero para poder resolverlos.
+
+    Misma nota que en basketball: posiciones de temporada completa no se
+    sincronizan todavía (endpoint no confirmado con certeza), así que la
+    probabilidad usa 50/50 por defecto para estos equipos por ahora.
+    """
+    db = SessionLocal()
+    try:
+        league = db.query(League).filter(League.key == league_key).first()
+        if not league:
+            logger.warning("Liga '%s' no existe en la BD; ejecuta ensure_base_catalog primero.", league_key)
+            return
+
+        try:
+            teams_data = await balldontlie_service.get_teams(league_key)
+            for team_info in teams_data.get("data", []):
+                external_id = str(team_info["id"])
+                team = (
+                    db.query(Team)
+                    .filter(Team.league_id == league.id, Team.external_id == external_id)
+                    .first()
+                )
+                if not team:
+                    team = Team(league_id=league.id, external_id=external_id, name=team_info.get("name", ""))
+                    db.add(team)
+                team.name = team_info.get("name") or team.name
+                team.short_name = team_info.get("short_name") or team_info.get("name")
+                team.abbreviation = team_info.get("abbreviation")
+                team.city = team_info.get("city")
+                # Logo: sin CDN confirmado todavía para esta liga; se deja sin definir a propósito.
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("No se pudieron sincronizar equipos de '%s'.", league_key)
+
+        try:
+            target_date = datetime.now(timezone.utc).date()
+            matches_data = await balldontlie_service.get_games(league_key, target_date)
+            for match_data in matches_data.get("data", []):
+                external_id = str(match_data["id"])
+                home_team = (
+                    db.query(Team)
+                    .filter(Team.league_id == league.id, Team.external_id == str(match_data["home_team_id"]))
+                    .first()
+                )
+                away_team = (
+                    db.query(Team)
+                    .filter(Team.league_id == league.id, Team.external_id == str(match_data["away_team_id"]))
+                    .first()
+                )
+                if not home_team or not away_team:
+                    continue
+
+                game = (
+                    db.query(Game)
+                    .filter(Game.league_id == league.id, Game.external_id == external_id)
+                    .first()
+                )
+                if not game:
+                    game = Game(
+                        league_id=league.id,
+                        external_id=external_id,
+                        home_team_id=home_team.id,
+                        away_team_id=away_team.id,
+                        start_time=datetime.fromisoformat(match_data["date"].replace("Z", "+00:00")),
+                    )
+                    db.add(game)
+
+                status, period_status = _interpret_soccer_status(
+                    str(match_data.get("status", "")), match_data.get("status_detail")
+                )
+                game.status = status
+                game.period_status = period_status
+                game.home_score = match_data.get("home_score")
+                game.away_score = match_data.get("away_score")
+                game.venue = match_data.get("venue_name")
+
+                if game.status == "scheduled" and game.home_win_probability is None:
+                    game.home_win_probability = estimate_home_win_probability(
+                        home_team.win_pct or 0.5, away_team.win_pct or 0.5
+                    )
+                game.last_synced_at = datetime.now(timezone.utc)
+
+            db.commit()
+            logger.info("Partidos de '%s' sincronizados.", league_key)
+        except Exception:
+            db.rollback()
+            logger.exception("No se pudieron sincronizar partidos de '%s'.", league_key)
+    finally:
+        db.close()
+
+
 def resolve_finished_predictions() -> None:
     """
     Recorre juegos finalizados con predicciones pendientes, determina si el
@@ -221,34 +482,37 @@ def resolve_finished_predictions() -> None:
 async def sync_news() -> None:
     db = SessionLocal()
     try:
-        baseball = db.query(Sport).filter(Sport.key == "baseball").first()
-        if not baseball:
-            return
-
-        articles = await news_service.fetch_general_baseball_news(limit=15)
-        for article in articles:
-            exists = db.query(NewsArticle).filter(NewsArticle.article_url == article["article_url"]).first()
-            if exists or not article["article_url"]:
+        sports = db.query(Sport).all()
+        for sport in sports:
+            try:
+                articles = await news_service.fetch_general_news(sport.key, limit=15)
+            except Exception:
+                logger.exception("No se pudieron obtener noticias de '%s'.", sport.key)
                 continue
-            db.add(
-                NewsArticle(
-                    sport_id=baseball.id,
-                    title=article["title"],
-                    summary=article["summary"],
-                    image_url=article["image_url"],
-                    source=article["source"],
-                    article_url=article["article_url"],
-                    published_at=article["published_at"],
+
+            for article in articles:
+                exists = db.query(NewsArticle).filter(NewsArticle.article_url == article["article_url"]).first()
+                if exists or not article["article_url"]:
+                    continue
+                db.add(
+                    NewsArticle(
+                        sport_id=sport.id,
+                        title=article["title"],
+                        summary=article["summary"],
+                        image_url=article["image_url"],
+                        source=article["source"],
+                        article_url=article["article_url"],
+                        published_at=article["published_at"],
+                    )
                 )
-            )
-        db.commit()
-        logger.info("Noticias de béisbol sincronizadas.")
+            db.commit()
+        logger.info("Noticias sincronizadas para %d deporte(s).", len(sports))
     finally:
         db.close()
 
 
 async def run_full_sync() -> None:
-    """Punto de entrada único para refrescar todo lo relacionado a MLB + noticias."""
+    """Punto de entrada único para refrescar todo lo relacionado a todas las ligas + noticias."""
     db = SessionLocal()
     try:
         ensure_base_catalog(db)
@@ -257,6 +521,22 @@ async def run_full_sync() -> None:
 
     await sync_mlb_teams_and_standings()
     await sync_mlb_games()
+
+    if settings.BALLDONTLIE_API_KEY:
+        for league_key in ("nba",):
+            try:
+                await sync_basketball_league(league_key)
+            except Exception:
+                logger.exception("Fallo sincronizando la liga de basketball '%s'.", league_key)
+
+        for league_key in ("epl", "world_cup"):
+            try:
+                await sync_soccer_league(league_key)
+            except Exception:
+                logger.exception("Fallo sincronizando la liga de fútbol '%s'.", league_key)
+    else:
+        logger.info("BALLDONTLIE_API_KEY no configurada: se omite la sincronización de basketball/fútbol/Mundial.")
+
     await sync_news()
     resolve_finished_predictions()
 

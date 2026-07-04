@@ -88,6 +88,10 @@ class NewsOut(BaseModel):
     source: str
     article_url: str
     published_at: datetime
+    # Detectados al momento de responder (no se guardan en BD): si el
+    # titular menciona un equipo conocido, se incluye su nombre y logo.
+    team_name: str | None = None
+    team_logo_url: str | None = None
 
     class Config:
         from_attributes = True

@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes import auth, favorites, games, leagues, news, predictions, stats
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine
+from app.core.migrations import run_lightweight_migrations
 from app.services.sync_service import ensure_base_catalog, run_full_sync
 
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +42,10 @@ async def lifespan(app: FastAPI):
     # NOTA: create_all() es adecuado para desarrollo. En producción se
     # recomienda usar Alembic para migraciones versionadas del esquema.
     Base.metadata.create_all(bind=engine)
+
+    # Parchea columnas nuevas en tablas que ya existían antes de este cambio
+    # (ver core/migrations.py para el porqué). Seguro de correr siempre.
+    run_lightweight_migrations(engine)
 
     db = SessionLocal()
     try:

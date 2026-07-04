@@ -62,6 +62,9 @@ class Team(Base):
     external_id: Mapped[str] = mapped_column(String(50), nullable=False)  # id en la API externa
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Nombre corto/mascota (ej. "Yankees", sin la ciudad). Se usa para detectar
+    # menciones del equipo en titulares de noticias y para mostrarlo compacto en la UI.
+    short_name: Mapped[str | None] = mapped_column(String(60), nullable=True)
     abbreviation: Mapped[str | None] = mapped_column(String(10), nullable=True)
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

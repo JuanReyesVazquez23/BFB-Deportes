@@ -272,6 +272,14 @@ button, input, select {
   box-shadow: none;
 }
 
+.ticker-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  margin: 0 2px;
+  vertical-align: middle;
+}
+
 /* ---------- Layout de secciones ---------- */
 .section {
   padding: 36px 0;
@@ -423,6 +431,15 @@ button, input, select {
   color: var(--bfb-yellow);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.news-team-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 /* ---------- Partidos: marcador estilo LED ---------- */

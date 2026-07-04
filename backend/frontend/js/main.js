@@ -26,10 +26,12 @@ const NEWS_SPORT_BY_TAB = {
 const SPORT_READY = {
   // La MLB corre sobre la API oficial gratuita: funciona sin configuración adicional.
   baseball: true,
-  // Fútbol, basketball y Mundial dependen de que se configure BALLDONTLIE_API_KEY en el backend.
-  football: false,
-  basketball: false,
-  worldcup: false,
+  // Ya construido y conectado a balldontlie. Si no ves datos, confirma en los
+  // logs de Railway que BALLDONTLIE_API_KEY esté configurada y que el primer
+  // ciclo de sincronización (cada 5 min) ya haya corrido.
+  football: true,
+  basketball: true,
+  worldcup: true,
 };
 
 let activeSport = 'baseball';
@@ -122,7 +124,9 @@ async function renderNews(sportKey) {
   const container = document.getElementById('news-container');
   container.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
   try {
-    const articles = await api.get(`/news/${sportKey}`);
+    // sort=trending: prioriza noticias sobre equipos de los que hay más
+    // cobertura reciente (relevancia real por menciones), no solo la más nueva.
+    const articles = await api.get(`/news/${sportKey}?sort=trending`);
     if (!articles.length) {
       container.innerHTML = `<p class="empty-state">${t('common.comingSoon')}</p>`;
       return;
@@ -133,7 +137,10 @@ async function renderNews(sportKey) {
         <article class="card news-card">
           ${a.image_url ? `<img src="${a.image_url}" alt="" loading="lazy">` : ''}
           <div class="card-body">
-            <div class="news-meta">${t('common.source')}: ${a.source} · ${formatDate(a.published_at)}</div>
+            <div class="news-meta">
+              ${a.team_logo_url ? `<img src="${a.team_logo_url}" alt="" class="news-team-logo">` : ''}
+              ${t('common.source')}: ${a.source} · ${formatDate(a.published_at)}
+            </div>
             <h3>${a.title}</h3>
             ${a.summary ? `<p>${a.summary}</p>` : ''}
             <a class="btn btn-outline btn-small" href="${a.article_url}" target="_blank" rel="noopener noreferrer">${t('common.readMore')}</a>
@@ -147,9 +154,14 @@ async function renderNews(sportKey) {
 }
 
 /* ---------------------- Partidos: en vivo / finalizados / próximos ---------------------- */
-function gameStatusLabel(status) {
-  if (status === 'live') return `<span class="game-status live">● ${t('game.live')}</span>`;
-  if (status === 'final') return `<span class="game-status">${t('game.final')}</span>`;
+function gameStatusLabel(game) {
+  if (game.status === 'live') {
+    // period_status ya lo calcula el backend (ej. "Inning 7" en MLB). Si algún
+    // día no viene (otras ligas todavía sin ese dato), solo se muestra "En vivo".
+    const period = game.period_status ? ` · ${game.period_status}` : '';
+    return `<span class="game-status live">● ${t('game.live')}${period}</span>`;
+  }
+  if (game.status === 'final') return `<span class="game-status">${t('game.final')}</span>`;
   return `<span class="game-status">${t('game.scheduled')}</span>`;
 }
 
@@ -230,10 +242,12 @@ function renderTicker(games) {
     .map((g) => {
       const isFinal = g.status === 'final';
       const score = g.status === 'scheduled' ? formatDate(g.start_time) : `${g.home_score ?? 0}-${g.away_score ?? 0}`;
+      const awayLogo = g.away_team.logo_url ? `<img src="${g.away_team.logo_url}" alt="" class="ticker-logo">` : '';
+      const homeLogo = g.home_team.logo_url ? `<img src="${g.home_team.logo_url}" alt="" class="ticker-logo">` : '';
       return `
         <span class="ticker-item ${isFinal ? 'final' : ''}">
           <span class="ticker-dot"></span>
-          ${g.away_team.abbreviation || g.away_team.name} @ ${g.home_team.abbreviation || g.home_team.name} · ${score}
+          ${awayLogo}${g.away_team.abbreviation || g.away_team.name} @ ${homeLogo}${g.home_team.abbreviation || g.home_team.name} · ${score}
         </span>`;
     })
     .join('');
@@ -260,7 +274,7 @@ async function renderGamesSection(leagueKey) {
         return `
         <div class="game-card">
           <div class="game-top-row">
-            ${gameStatusLabel(game.status)}
+            ${gameStatusLabel(game)}
             <span class="game-status">${formatDate(game.start_time)}</span>
           </div>
           <div class="scoreboard-row">
