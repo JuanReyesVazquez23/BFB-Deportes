@@ -25,7 +25,9 @@
     "news": "Noticias",
     "generalNews": "Noticias Generales",
     "liveAndResults": "En Vivo y Resultados",
+    "liveNow": "En Vivo Ahora",
     "upcoming": "Próximos Partidos",
+    "finished": "Finalizados",
     "stats": "Estadísticas"
   },
   "game": {
@@ -49,6 +51,8 @@
   },
   "common": {
     "comingSoon": "Esta liga se activará al configurar su fuente de datos (API key). La estructura ya está lista.",
+    "noGamesToday": "No hay partidos programados para hoy en esta liga.",
+    "standingsUnavailable": "Las posiciones de esta liga todavía no están disponibles.",
     "loading": "Cargando...",
     "error": "Ocurrió un error al cargar la información.",
     "readMore": "Leer en ESPN",

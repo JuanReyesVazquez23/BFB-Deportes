@@ -50,7 +50,7 @@ async function renderStandings(leagueKey) {
   try {
     const teams = await api.get(`/leagues/${leagueKey}/standings`);
     if (!teams.length) {
-      container.innerHTML = `<p class="empty-state">${t('common.comingSoon')}</p>`;
+      container.innerHTML = `<p class="empty-state">${t('common.standingsUnavailable')}</p>`;
       return;
     }
     const rows = teams
@@ -94,7 +94,7 @@ async function renderPlayersToday(leagueKey) {
     const games = await api.get(`/leagues/${leagueKey}/games?status=scheduled`);
 
     if (!games.length) {
-      container.innerHTML = `<p class="empty-state">${t('common.comingSoon')}</p>`;
+      container.innerHTML = `<p class="empty-state">${t('common.noGamesToday')}</p>`;
       return;
     }
 
@@ -256,6 +256,46 @@ function renderTicker(games) {
   track.innerHTML = items + items;
 }
 
+function scoreDisplay(game) {
+  // No mostrar marcador numérico en partidos que aún no comienzan: la API
+  // devuelve 0 (no null) para esos casos, y 0-0 se confundía con un
+  // partido realmente empatado en 0. Se decide por el status, no por el valor.
+  if (game.status === 'scheduled') return 'VS';
+  return `${game.home_score ?? 0} : ${game.away_score ?? 0}`;
+}
+
+async function renderGameCard(game) {
+  const predictionRow = await renderPredictionRow(game);
+  return `
+    <div class="game-card">
+      <div class="game-top-row">
+        ${gameStatusLabel(game)}
+        <span class="game-status">${formatDate(game.start_time)}</span>
+      </div>
+      <div class="scoreboard-row">
+        <div class="team-block home">
+          ${game.home_team.logo_url ? `<img src="${game.home_team.logo_url}" alt="">` : ''}
+          <span class="team-name">${game.home_team.name}</span>
+        </div>
+        <div class="score-led">${scoreDisplay(game)}</div>
+        <div class="team-block away">
+          ${game.away_team.logo_url ? `<img src="${game.away_team.logo_url}" alt="">` : ''}
+          <span class="team-name">${game.away_team.name}</span>
+        </div>
+      </div>
+      ${renderGameDetailsBlock(game)}
+      ${predictionRow}
+    </div>`;
+}
+
+async function renderGameGroup(titleKey, games) {
+  if (!games.length) return '';
+  const cards = await Promise.all(games.map(renderGameCard));
+  return `
+    <h3 class="section-title" style="font-size:16px;margin-top:22px;">${t(titleKey)}</h3>
+    ${cards.join('')}`;
+}
+
 async function renderGamesSection(leagueKey) {
   const container = document.getElementById('games-container');
   container.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
@@ -264,37 +304,22 @@ async function renderGamesSection(leagueKey) {
     renderTicker(games);
 
     if (!games.length) {
-      container.innerHTML = `<p class="empty-state">${t('common.comingSoon')}</p>`;
+      container.innerHTML = `<p class="empty-state">${t('common.noGamesToday')}</p>`;
       return;
     }
 
-    const cardsHtml = await Promise.all(
-      games.map(async (game) => {
-        const predictionRow = await renderPredictionRow(game);
-        return `
-        <div class="game-card">
-          <div class="game-top-row">
-            ${gameStatusLabel(game)}
-            <span class="game-status">${formatDate(game.start_time)}</span>
-          </div>
-          <div class="scoreboard-row">
-            <div class="team-block home">
-              ${game.home_team.logo_url ? `<img src="${game.home_team.logo_url}" alt="">` : ''}
-              <span class="team-name">${game.home_team.name}</span>
-            </div>
-            <div class="score-led">${game.home_score ?? '-'} : ${game.away_score ?? '-'}</div>
-            <div class="team-block away">
-              ${game.away_team.logo_url ? `<img src="${game.away_team.logo_url}" alt="">` : ''}
-              <span class="team-name">${game.away_team.name}</span>
-            </div>
-          </div>
-          ${renderGameDetailsBlock(game)}
-          ${predictionRow}
-        </div>`;
-      })
-    );
+    // Organizados por estado: en vivo primero (lo más urgente), luego los
+    // que faltan por jugar (para predecir), y al final los ya terminados.
+    const live = games.filter((g) => g.status === 'live');
+    const upcoming = games.filter((g) => g.status === 'scheduled');
+    const finished = games.filter((g) => g.status === 'final');
 
-    container.innerHTML = cardsHtml.join('');
+    const html =
+      (await renderGameGroup('sections.liveNow', live)) +
+      (await renderGameGroup('sections.upcoming', upcoming)) +
+      (await renderGameGroup('sections.finished', finished));
+
+    container.innerHTML = html;
     attachPredictionHandlers(container);
   } catch (err) {
     container.innerHTML = `<p class="empty-state">${t('common.error')}</p>`;

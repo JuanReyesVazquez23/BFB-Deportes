@@ -25,7 +25,9 @@
     "news": "News",
     "generalNews": "General News",
     "liveAndResults": "Live & Results",
+    "liveNow": "Live Now",
     "upcoming": "Upcoming Games",
+    "finished": "Finished",
     "stats": "Statistics"
   },
   "game": {
@@ -49,6 +51,8 @@
   },
   "common": {
     "comingSoon": "This league will activate once its data source (API key) is configured. The structure is already built.",
+    "noGamesToday": "No games scheduled today for this league.",
+    "standingsUnavailable": "Standings for this league aren't available yet.",
     "loading": "Loading...",
     "error": "Something went wrong while loading data.",
     "readMore": "Read on ESPN",

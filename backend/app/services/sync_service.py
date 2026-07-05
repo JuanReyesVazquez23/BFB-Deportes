@@ -523,17 +523,25 @@ async def run_full_sync() -> None:
     await sync_mlb_games()
 
     if settings.BALLDONTLIE_API_KEY:
+        # El plan gratuito de balldontlie permite 5 peticiones por minuto.
+        # Cada liga hace 2 (equipos + partidos); sin este espacio, sincronizar
+        # NBA + EPL + Mundial seguidos (6 peticiones) puede chocar con ese
+        # límite y fallar en silencio para las últimas ligas de la lista.
+        BALLDONTLIE_CALL_SPACING_SECONDS = 13
+
         for league_key in ("nba",):
             try:
                 await sync_basketball_league(league_key)
             except Exception:
                 logger.exception("Fallo sincronizando la liga de basketball '%s'.", league_key)
+            await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
 
         for league_key in ("epl", "world_cup"):
             try:
                 await sync_soccer_league(league_key)
             except Exception:
                 logger.exception("Fallo sincronizando la liga de fútbol '%s'.", league_key)
+            await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
     else:
         logger.info("BALLDONTLIE_API_KEY no configurada: se omite la sincronización de basketball/fútbol/Mundial.")
 
