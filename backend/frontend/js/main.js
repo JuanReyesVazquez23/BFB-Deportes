@@ -4,23 +4,18 @@
  * (en vivo / finalizados / próximos con barra de probabilidad).
  */
 
-// Configuración de la liga principal a mostrar por cada deporte.
-// El botón de la pestaña también permite, a futuro, listar otras ligas
-// del mismo deporte (endpoint /sports/{sport_key}/leagues ya existe).
+// Liga principal que se muestra por defecto al entrar a cada deporte.
+// El selector de liga (junto a las pestañas) permite cambiarla en vivo.
 const PRIMARY_LEAGUE_BY_SPORT = {
   baseball: 'mlb',
-  football: 'epl', // liga de fútbol de ejemplo; el buscador de ligas se alimenta de /sports/football/leagues
+  football: 'epl',
   basketball: 'nba',
-  worldcup: 'world_cup', // apartado especial: usa la liga "world_cup" de balldontlie
 };
 
-// El Mundial no es un deporte aparte en la base de datos, es parte de "football".
-// Por eso sus noticias generales se toman del deporte fútbol.
 const NEWS_SPORT_BY_TAB = {
   baseball: 'baseball',
   football: 'football',
   basketball: 'basketball',
-  worldcup: 'football',
 };
 
 const SPORT_READY = {
@@ -31,7 +26,6 @@ const SPORT_READY = {
   // ciclo de sincronización (cada 5 min) ya haya corrido.
   football: true,
   basketball: true,
-  worldcup: true,
 };
 
 let activeSport = 'baseball';
@@ -384,18 +378,63 @@ async function toggleFavorite(star, type, id) {
 }
 
 /* ---------------------- Cambio de pestaña de deporte ---------------------- */
+let activeLeague = null;
+
+/**
+ * Llena el selector de liga con las ligas reales del deporte activo
+ * (endpoint /sports/{sport_key}/leagues). Si solo hay una liga disponible,
+ * el selector se oculta (no tiene sentido "elegir" si no hay opciones).
+ * Devuelve la liga que debe cargarse (la marcada is_primary, o la primera).
+ */
+async function populateLeagueSelector(sportKey) {
+  const row = document.querySelector('.league-select-row');
+  const select = document.getElementById('league-select');
+
+  try {
+    const leagues = await api.get(`/sports/${sportKey}/leagues`);
+    if (leagues.length <= 1) {
+      row.classList.add('hidden');
+      return leagues[0]?.key || PRIMARY_LEAGUE_BY_SPORT[sportKey];
+    }
+
+    row.classList.remove('hidden');
+    select.innerHTML = leagues.map((l) => `<option value="${l.key}">${l.name}</option>`).join('');
+    const primary = leagues.find((l) => l.is_primary) || leagues[0];
+    select.value = primary.key;
+    return primary.key;
+  } catch (err) {
+    row.classList.add('hidden');
+    return PRIMARY_LEAGUE_BY_SPORT[sportKey];
+  }
+}
+
+async function loadLeagueData(leagueKey) {
+  activeLeague = leagueKey;
+  await Promise.all([
+    renderStandings(leagueKey),
+    renderPlayersToday(leagueKey),
+    renderGamesSection(leagueKey),
+  ]);
+}
+
+function initLeagueSelector() {
+  document.getElementById('league-select').addEventListener('change', (e) => {
+    loadLeagueData(e.target.value);
+  });
+}
+
 async function loadSportSection(sportKey) {
   activeSport = sportKey;
   document.querySelectorAll('.sport-tab').forEach((tab) => {
     tab.classList.toggle('active', tab.dataset.sport === sportKey);
   });
 
-  const leagueKey = PRIMARY_LEAGUE_BY_SPORT[sportKey];
   const isReady = SPORT_READY[sportKey];
 
   await renderNews(NEWS_SPORT_BY_TAB[sportKey]); // las noticias generales del deporte siempre se muestran
 
   if (!isReady) {
+    document.querySelector('.league-select-row').classList.add('hidden');
     ['standings-container', 'players-today-container', 'games-container'].forEach((id) => {
       document.getElementById(id).innerHTML = `<p class="empty-state">${t('common.comingSoon')}</p>`;
     });
@@ -403,11 +442,8 @@ async function loadSportSection(sportKey) {
     return;
   }
 
-  await Promise.all([
-    renderStandings(leagueKey),
-    renderPlayersToday(leagueKey),
-    renderGamesSection(leagueKey),
-  ]);
+  const leagueKey = await populateLeagueSelector(sportKey);
+  await loadLeagueData(leagueKey);
 }
 
 function initSportTabs() {
@@ -422,6 +458,7 @@ async function initApp() {
   await initI18n();
   initAuth();
   initSportTabs();
+  initLeagueSelector();
   initStatsSearch();
   await loadSportSection('baseball');
 }

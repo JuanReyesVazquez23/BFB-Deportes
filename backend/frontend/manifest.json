@@ -1,6 +1,6 @@
 {
   "name": "BFB Deportes",
-  "short_name": "BFB",
+  "short_name": "BFB Deportes",
   "description": "Béisbol, Fútbol y Basketball, todo en un mismo lugar.",
   "start_url": "/",
   "display": "standalone",

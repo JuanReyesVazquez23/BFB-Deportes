@@ -47,12 +47,21 @@
     "searchTeam": "Buscar equipo",
     "searchPlayer": "Buscar jugador",
     "placeholderTeam": "Escribe el nombre de un equipo...",
-    "placeholderPlayer": "Escribe el nombre de un jugador..."
+    "placeholderPlayer": "Escribe el nombre de un jugador...",
+    "win": "G",
+    "loss": "P",
+    "wins": "Ganados",
+    "losses": "Perdidos",
+    "winPct": "Efectividad",
+    "recentResults": "Últimos partidos",
+    "noRecentGames": "Sin partidos recientes registrados.",
+    "noMatches": "No se encontraron resultados."
   },
   "common": {
     "comingSoon": "Esta liga se activará al configurar su fuente de datos (API key). La estructura ya está lista.",
     "noGamesToday": "No hay partidos programados para hoy en esta liga.",
     "standingsUnavailable": "Las posiciones de esta liga todavía no están disponibles.",
+    "league": "Liga",
     "loading": "Cargando...",
     "error": "Ocurrió un error al cargar la información.",
     "readMore": "Leer en ESPN",

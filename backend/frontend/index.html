@@ -12,6 +12,8 @@
   <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
   <!-- Ícono para pantalla principal en iPhone/iPad (iOS no usa manifest.json para esto) -->
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="BFB Deportes">
   <meta name="theme-color" content="#0b0b0c">
 
   <link rel="stylesheet" href="css/styles.css">
@@ -43,8 +45,11 @@
         <button class="sport-tab active" data-sport="baseball" data-i18n="nav.baseball">Béisbol</button>
         <button class="sport-tab" data-sport="football" data-i18n="nav.football">Fútbol</button>
         <button class="sport-tab" data-sport="basketball" data-i18n="nav.basketball">Basketball</button>
-        <button class="sport-tab" data-sport="worldcup" data-i18n="nav.worldcup">Mundial 2026</button>
       </nav>
+      <div class="league-select-row">
+        <label for="league-select" data-i18n="common.league">Liga:</label>
+        <select id="league-select" class="league-select" aria-label="Seleccionar liga"></select>
+      </div>
     </div>
   </header>
 
@@ -87,16 +92,24 @@
     <!-- Estadísticas -->
     <section class="section">
       <h2 class="section-title" data-i18n="sections.stats">Estadísticas</h2>
-      <form id="stats-form" class="stats-search">
+      <div class="stats-search">
         <select id="stats-type" aria-label="Tipo de estadística">
           <option value="team" data-i18n="stats.searchTeam">Buscar equipo</option>
           <option value="player" data-i18n="stats.searchPlayer">Buscar jugador</option>
         </select>
-        <input type="number" id="stats-id" placeholder="ID del equipo o jugador" min="1" required>
-        <button type="submit" class="btn btn-primary">Buscar</button>
-      </form>
-      <pre class="stats-result" id="stats-result"></pre>
+        <div class="stats-autocomplete-wrap">
+          <input
+            type="text"
+            id="stats-query"
+            autocomplete="off"
+            data-i18n-placeholder="stats.placeholderTeam"
+            placeholder="Escribe el nombre de un equipo...">
+          <div id="stats-suggestions" class="stats-suggestions hidden"></div>
+        </div>
+      </div>
+      <div class="stats-result" id="stats-result"></div>
     </section>
+
 
   </main>
 

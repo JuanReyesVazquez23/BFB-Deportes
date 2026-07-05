@@ -47,9 +47,18 @@
     "searchTeam": "Search team",
     "searchPlayer": "Search player",
     "placeholderTeam": "Type a team name...",
-    "placeholderPlayer": "Type a player name..."
+    "placeholderPlayer": "Type a player name...",
+    "win": "W",
+    "loss": "L",
+    "wins": "Wins",
+    "losses": "Losses",
+    "winPct": "Win %",
+    "recentResults": "Recent results",
+    "noRecentGames": "No recent games recorded.",
+    "noMatches": "No matches found."
   },
   "common": {
+    "league": "League",
     "comingSoon": "This league will activate once its data source (API key) is configured. The structure is already built.",
     "noGamesToday": "No games scheduled today for this league.",
     "standingsUnavailable": "Standings for this league aren't available yet.",

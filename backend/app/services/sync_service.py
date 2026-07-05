@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.prediction import Prediction
-from app.models.sport import Game, League, NewsArticle, Sport, Team
+from app.models.sport import Game, League, NewsArticle, Player, Sport, Team
 from app.models.user import User
 from app.services import balldontlie_service, mlb_service, news_service
 from app.services.probability_service import estimate_home_win_probability, points_for_prediction
@@ -51,15 +51,25 @@ def _get_or_create_league(db: Session, sport: Sport, key: str, name: str, provid
 
 
 def ensure_base_catalog(db: Session) -> None:
-    """Crea los deportes y las ligas principales si todavía no existen (idempotente)."""
+    """Crea los deportes y las ligas si todavía no existen (idempotente)."""
     baseball = _get_or_create_sport(db, "baseball", "Béisbol", "Baseball")
     football = _get_or_create_sport(db, "football", "Fútbol", "Football")
     basketball = _get_or_create_sport(db, "basketball", "Basketball", "Basketball")
 
     _get_or_create_league(db, baseball, "mlb", "MLB", provider="mlb_stats_api", is_primary=True)
+
     _get_or_create_league(db, basketball, "nba", "NBA", provider="balldontlie", is_primary=True)
+    _get_or_create_league(db, basketball, "wnba", "WNBA", provider="balldontlie")
+    _get_or_create_league(db, basketball, "ncaab", "NCAA Basketball", provider="balldontlie")
+
+    # El Mundial vive aquí, como una liga más de fútbol (igual que en
+    # SofaScore/OneFootball), no como una pestaña de deporte aparte.
     _get_or_create_league(db, football, "epl", "Premier League", provider="balldontlie", is_primary=True)
-    _get_or_create_league(db, football, "world_cup", "Mundial 2026", provider="balldontlie", is_primary=False)
+    _get_or_create_league(db, football, "laliga", "La Liga", provider="balldontlie")
+    _get_or_create_league(db, football, "seriea", "Serie A", provider="balldontlie")
+    _get_or_create_league(db, football, "bundesliga", "Bundesliga", provider="balldontlie")
+    _get_or_create_league(db, football, "ligue1", "Ligue 1", provider="balldontlie")
+    _get_or_create_league(db, football, "world_cup", "Mundial 2026", provider="balldontlie")
 
 
 async def sync_mlb_teams_and_standings() -> None:
@@ -115,6 +125,23 @@ async def sync_mlb_teams_and_standings() -> None:
         db.close()
 
 
+def _extract_mlb_score(game_data: dict, side: str) -> int | None:
+    """
+    Extrae el marcador real de un lado ("home" o "away") de un juego de MLB.
+
+    Se prioriza linescore.teams.{side}.runs, confirmado como la fuente que
+    sí se actualiza mientras el partido está EN VIVO. teams.{side}.score
+    se usa como respaldo (es la fuente que ya se usaba antes; funciona bien
+    para partidos finalizados, pero se quedaba en 0 durante partidos en vivo,
+    que era la causa del bug reportado de "siempre 0-0").
+    """
+    linescore_teams = (game_data.get("linescore") or {}).get("teams") or {}
+    runs = linescore_teams.get(side, {}).get("runs")
+    if runs is not None:
+        return runs
+    return game_data.get("teams", {}).get(side, {}).get("score")
+
+
 async def sync_mlb_games(target_date: date | None = None) -> None:
     db = SessionLocal()
     try:
@@ -164,8 +191,8 @@ async def sync_mlb_games(target_date: date | None = None) -> None:
                 status_map = {"Preview": "scheduled", "Live": "live", "Final": "final"}
                 game.status = status_map.get(raw_status, "scheduled")
 
-                game.home_score = game_data["teams"]["home"].get("score")
-                game.away_score = game_data["teams"]["away"].get("score")
+                game.home_score = _extract_mlb_score(game_data, "home")
+                game.away_score = _extract_mlb_score(game_data, "away")
                 game.venue = game_data.get("venue", {}).get("name")
 
                 if game.status == "scheduled" and game.home_win_probability is None:
@@ -435,6 +462,51 @@ async def sync_soccer_league(league_key: str) -> None:
         db.close()
 
 
+async def sync_mlb_rosters() -> None:
+    """
+    Sincroniza los jugadores (roster) de cada equipo de MLB. Es lo que
+    permite que el buscador de estadísticas encuentre jugadores reales por
+    nombre, no solo por ID.
+    """
+    db = SessionLocal()
+    try:
+        league = db.query(League).filter(League.key == "mlb").first()
+        if not league:
+            return
+
+        teams = db.query(Team).filter(Team.league_id == league.id).all()
+        for team in teams:
+            try:
+                roster_data = await mlb_service.get_team_roster(int(team.external_id), CURRENT_MLB_SEASON)
+            except Exception:
+                logger.exception("No se pudo obtener el roster del equipo '%s'.", team.name)
+                continue
+
+            for entry in roster_data.get("roster", []):
+                person = entry.get("person", {})
+                external_id = str(person.get("id", ""))
+                if not external_id:
+                    continue
+
+                player = (
+                    db.query(Player)
+                    .filter(Player.team_id == team.id, Player.external_id == external_id)
+                    .first()
+                )
+                if not player:
+                    player = Player(team_id=team.id, external_id=external_id, full_name=person.get("fullName", ""))
+                    db.add(player)
+
+                player.full_name = person.get("fullName") or player.full_name
+                player.position = entry.get("position", {}).get("abbreviation")
+                player.jersey_number = entry.get("jerseyNumber")
+
+        db.commit()
+        logger.info("Roster de MLB sincronizado (%d equipos).", len(teams))
+    finally:
+        db.close()
+
+
 def resolve_finished_predictions() -> None:
     """
     Recorre juegos finalizados con predicciones pendientes, determina si el
@@ -521,6 +593,7 @@ async def run_full_sync() -> None:
 
     await sync_mlb_teams_and_standings()
     await sync_mlb_games()
+    await sync_mlb_rosters()
 
     if settings.BALLDONTLIE_API_KEY:
         # El plan gratuito de balldontlie permite 5 peticiones por minuto.
@@ -529,14 +602,14 @@ async def run_full_sync() -> None:
         # límite y fallar en silencio para las últimas ligas de la lista.
         BALLDONTLIE_CALL_SPACING_SECONDS = 13
 
-        for league_key in ("nba",):
+        for league_key in ("nba", "wnba", "ncaab"):
             try:
                 await sync_basketball_league(league_key)
             except Exception:
                 logger.exception("Fallo sincronizando la liga de basketball '%s'.", league_key)
             await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
 
-        for league_key in ("epl", "world_cup"):
+        for league_key in ("epl", "laliga", "seriea", "bundesliga", "ligue1", "world_cup"):
             try:
                 await sync_soccer_league(league_key)
             except Exception:
