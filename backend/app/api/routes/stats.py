@@ -1,8 +1,11 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_db
 from app.models.sport import Game, Player, Team
+from app.services import mlb_service
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -92,11 +95,38 @@ def team_stats(team_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/player/{player_id}")
-def player_stats(player_id: int, db: Session = Depends(get_db)):
-    """Perfil real de un jugador: posición, número y su equipo actual."""
-    player = db.query(Player).options(joinedload(Player.team)).filter(Player.id == player_id).first()
+async def player_stats(player_id: int, db: Session = Depends(get_db)):
+    """
+    Perfil real de un jugador: posición, número, equipo, y sus estadísticas
+    reales de la temporada actual (home runs, hits, OBP, etc. si es
+    bateador; wins, ERA, ponches si es pitcher).
+
+    Los números se consultan en vivo a MLB Stats API en el momento de la
+    búsqueda (solo para jugadores de esa liga por ahora). Si la consulta
+    externa falla, se muestra igual el perfil del jugador sin números en
+    vez de romper la página completa.
+    """
+    player = (
+        db.query(Player)
+        .options(joinedload(Player.team).joinedload(Team.league))
+        .filter(Player.id == player_id)
+        .first()
+    )
     if not player:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Jugador no encontrado.")
+
+    batting_stats = None
+    pitching_stats = None
+
+    is_mlb_player = player.team and player.team.league and player.team.league.data_provider == "mlb_stats_api"
+    if is_mlb_player:
+        try:
+            current_season = datetime.now(timezone.utc).year
+            raw_stats = await mlb_service.get_player_season_stats(int(player.external_id), current_season)
+            batting_stats = mlb_service.extract_batting_stats(raw_stats["hitting"])
+            pitching_stats = mlb_service.extract_pitching_stats(raw_stats["pitching"])
+        except Exception:
+            pass  # el perfil se muestra igual, solo sin números, en vez de fallar la petición completa
 
     return {
         "id": player.id,
@@ -110,4 +140,6 @@ def player_stats(player_id: int, db: Session = Depends(get_db)):
         }
         if player.team
         else None,
+        "batting_stats": batting_stats,
+        "pitching_stats": pitching_stats,
     }

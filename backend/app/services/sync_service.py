@@ -27,6 +27,14 @@ logger = logging.getLogger("bfb.sync")
 
 CURRENT_MLB_SEASON = datetime.now(timezone.utc).year
 
+# El plan gratuito de balldontlie permite 5 peticiones/minuto. Con 13s de
+# espaciado SOLO entre ligas (y las 2 llamadas de cada liga seguidas), el
+# cálculo real daba ~9 llamadas/minuto -> se pasaba del límite y fallaba en
+# silencio. Ahora se espacia CADA llamada individual (dentro de cada liga
+# también), y 20s de espaciado da ~3-4 llamadas/minuto: dentro del límite
+# con margen real, no al filo.
+BALLDONTLIE_CALL_SPACING_SECONDS = 20
+
 
 def _get_or_create_sport(db: Session, key: str, name_es: str, name_en: str) -> Sport:
     sport = db.query(Sport).filter(Sport.key == key).first()
@@ -303,6 +311,10 @@ async def sync_basketball_league(league_key: str) -> None:
             logger.exception("No se pudieron sincronizar equipos de '%s'.", league_key)
 
         try:
+            # Pausa entre esta llamada y la de equipos de arriba: balldontlie
+            # gratis permite 5 peticiones/minuto: espaciar solo entre ligas
+            # (y no entre las 2 llamadas de cada liga) no alcanzaba.
+            await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
             target_date = datetime.now(timezone.utc).date()
             games_data = await balldontlie_service.get_games(league_key, target_date)
             for game_data in games_data.get("data", []):
@@ -406,6 +418,8 @@ async def sync_soccer_league(league_key: str) -> None:
             logger.exception("No se pudieron sincronizar equipos de '%s'.", league_key)
 
         try:
+            # Misma razón que en basketball: espaciar solo entre ligas no alcanzaba.
+            await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
             target_date = datetime.now(timezone.utc).date()
             matches_data = await balldontlie_service.get_games(league_key, target_date)
             for match_data in matches_data.get("data", []):
@@ -596,12 +610,6 @@ async def run_full_sync() -> None:
     await sync_mlb_rosters()
 
     if settings.BALLDONTLIE_API_KEY:
-        # El plan gratuito de balldontlie permite 5 peticiones por minuto.
-        # Cada liga hace 2 (equipos + partidos); sin este espacio, sincronizar
-        # NBA + EPL + Mundial seguidos (6 peticiones) puede chocar con ese
-        # límite y fallar en silencio para las últimas ligas de la lista.
-        BALLDONTLIE_CALL_SPACING_SECONDS = 13
-
         for league_key in ("nba", "wnba", "ncaab"):
             try:
                 await sync_basketball_league(league_key)

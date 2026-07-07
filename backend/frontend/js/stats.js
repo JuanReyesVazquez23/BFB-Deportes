@@ -44,7 +44,38 @@ function renderTeamCard(team) {
     </div>`;
 }
 
+function renderBattingStatsBlock(stats) {
+  if (!stats) return '';
+  return `
+    <h4 class="stats-section-label">${t('stats.battingStats')}</h4>
+    <div class="stats-record-row stats-record-wrap">
+      <div><strong>${stats.avg ?? '-'}</strong><span>${t('stats.avg')}</span></div>
+      <div><strong>${stats.home_runs ?? 0}</strong><span>${t('stats.homeRuns')}</span></div>
+      <div><strong>${stats.hits ?? 0}</strong><span>${t('stats.hits')}</span></div>
+      <div><strong>${stats.rbi ?? 0}</strong><span>${t('stats.rbi')}</span></div>
+      <div><strong>${stats.obp ?? '-'}</strong><span>${t('stats.obp')}</span></div>
+      <div><strong>${stats.slg ?? '-'}</strong><span>${t('stats.slg')}</span></div>
+      <div><strong>${stats.ops ?? '-'}</strong><span>${t('stats.ops')}</span></div>
+      <div><strong>${stats.stolen_bases ?? 0}</strong><span>${t('stats.stolenBases')}</span></div>
+    </div>`;
+}
+
+function renderPitchingStatsBlock(stats) {
+  if (!stats) return '';
+  return `
+    <h4 class="stats-section-label">${t('stats.pitchingStats')}</h4>
+    <div class="stats-record-row stats-record-wrap">
+      <div><strong>${stats.wins ?? 0}-${stats.losses ?? 0}</strong><span>${t('stats.record')}</span></div>
+      <div><strong>${stats.era ?? '-'}</strong><span>${t('stats.era')}</span></div>
+      <div><strong>${stats.strikeouts ?? 0}</strong><span>${t('stats.strikeouts')}</span></div>
+      <div><strong>${stats.saves ?? 0}</strong><span>${t('stats.saves')}</span></div>
+      <div><strong>${stats.innings_pitched ?? '-'}</strong><span>${t('stats.inningsPitched')}</span></div>
+      <div><strong>${stats.whip ?? '-'}</strong><span>WHIP</span></div>
+    </div>`;
+}
+
 function renderPlayerCard(player) {
+  const hasStats = player.batting_stats || player.pitching_stats;
   return `
     <div class="stats-card">
       <div class="stats-card-header">
@@ -57,6 +88,9 @@ function renderPlayerCard(player) {
           </span>
         </div>
       </div>
+      ${renderBattingStatsBlock(player.batting_stats)}
+      ${renderPitchingStatsBlock(player.pitching_stats)}
+      ${!hasStats ? `<p class="empty-state">${t('stats.noStatsYet')}</p>` : ''}
     </div>`;
 }
 

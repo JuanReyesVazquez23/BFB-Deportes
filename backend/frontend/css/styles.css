@@ -859,6 +859,8 @@ button, input, select {
   border-top: 1px solid var(--bfb-border);
   border-bottom: 1px solid var(--bfb-border);
   margin-bottom: 16px;
+  flex-wrap: wrap;
+  row-gap: 12px;
 }
 
 .stats-record-row div {

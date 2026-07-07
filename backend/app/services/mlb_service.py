@@ -76,6 +76,63 @@ async def get_team_roster(team_id: int, season: int) -> dict:
         return resp.json()
 
 
+async def get_player_season_stats(person_id: int, season: int) -> dict:
+    """
+    Estadísticas reales de temporada de un jugador: bateo y pitcheo. Se
+    consulta en vivo solo cuando el usuario busca a ese jugador (no se
+    guarda en BD), así siempre está al día y no hace falta otra migración.
+    Un bateador no tendrá datos de pitcheo y viceversa; eso es normal.
+    """
+    url = f"{settings.MLB_STATS_API_BASE}/people/{person_id}/stats"
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        hitting_resp = await client.get(url, params={"stats": "season", "group": "hitting", "season": season})
+        pitching_resp = await client.get(url, params={"stats": "season", "group": "pitching", "season": season})
+    hitting_resp.raise_for_status()
+    pitching_resp.raise_for_status()
+    return {"hitting": hitting_resp.json(), "pitching": pitching_resp.json()}
+
+
+def _first_split_stat(stats_response: dict) -> dict | None:
+    splits = (stats_response.get("stats") or [{}])[0].get("splits", [])
+    return splits[0]["stat"] if splits else None
+
+
+def extract_batting_stats(hitting_response: dict) -> dict | None:
+    """Devuelve None si el jugador no tiene estadísticas de bateo esta temporada (ej. es pitcher puro)."""
+    stat = _first_split_stat(hitting_response)
+    if not stat:
+        return None
+    return {
+        "games": stat.get("gamesPlayed"),
+        "at_bats": stat.get("atBats"),
+        "hits": stat.get("hits"),
+        "home_runs": stat.get("homeRuns"),
+        "rbi": stat.get("rbi"),
+        "avg": stat.get("avg"),
+        "obp": stat.get("obp"),
+        "slg": stat.get("slg"),
+        "ops": stat.get("ops"),
+        "stolen_bases": stat.get("stolenBases"),
+    }
+
+
+def extract_pitching_stats(pitching_response: dict) -> dict | None:
+    """Devuelve None si el jugador no tiene estadísticas de pitcheo esta temporada (ej. es bateador puro)."""
+    stat = _first_split_stat(pitching_response)
+    if not stat:
+        return None
+    return {
+        "games": stat.get("gamesPlayed"),
+        "wins": stat.get("wins"),
+        "losses": stat.get("losses"),
+        "era": stat.get("era"),
+        "strikeouts": stat.get("strikeOuts"),
+        "saves": stat.get("saves"),
+        "innings_pitched": stat.get("inningsPitched"),
+        "whip": stat.get("whip"),
+    }
+
+
 def extract_probable_pitchers(schedule_game: dict) -> dict:
     """Extrae de un juego del /schedule los pitchers abridores probables (para 'Jugadores Hoy')."""
     probables = schedule_game.get("teams", {})
