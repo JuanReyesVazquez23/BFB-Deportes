@@ -367,9 +367,19 @@ async function renderGamesSection(leagueKey, specificDate = null) {
   try {
     const dateParam = specificDate ? `?game_date=${specificDate}` : '';
     const games = await api.get(`/leagues/${leagueKey}/games${dateParam}`);
-    renderTicker(games);
 
-    if (!games.length) {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const isPastDateSearch = Boolean(specificDate) && specificDate < todayIso;
+
+    // Si se busca una fecha pasada, se fuerza status='final' en una copia de
+    // cada juego (sin mutar el original). Así toda la lógica de abajo
+    // (etiqueta, si se muestra el diamante, agrupación) es consistente, sin
+    // importar qué status haya quedado guardado por error en el backend.
+    const displayGames = isPastDateSearch ? games.map((g) => ({ ...g, status: 'final' })) : games;
+
+    renderTicker(isPastDateSearch ? [] : displayGames);
+
+    if (!displayGames.length) {
       container.innerHTML = `<p class="empty-state">${t('common.noGamesToday')}</p>`;
       stopLivePolling();
       return;
@@ -377,9 +387,9 @@ async function renderGamesSection(leagueKey, specificDate = null) {
 
     // Organizados por estado: en vivo primero (lo más urgente), luego los
     // que faltan por jugar (para predecir), y al final los ya terminados.
-    const live = games.filter((g) => g.status === 'live');
-    const upcoming = games.filter((g) => g.status === 'scheduled');
-    const finished = games.filter((g) => g.status === 'final');
+    const live = displayGames.filter((g) => g.status === 'live');
+    const upcoming = displayGames.filter((g) => g.status === 'scheduled');
+    const finished = displayGames.filter((g) => g.status === 'final');
 
     const html =
       (await renderGameGroup('sections.liveNow', live)) +

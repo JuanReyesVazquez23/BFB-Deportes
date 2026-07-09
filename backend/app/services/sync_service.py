@@ -164,14 +164,24 @@ async def sync_mlb_games(target_date: date | None = None) -> None:
         # Se sincroniza "ayer" y "hoy" (no solo hoy): un juego de la Costa Oeste
         # que empieza tarde en hora local puede caer en el día siguiente en UTC,
         # y sin esto ese juego nunca se guardaba en la base de datos.
-        dates_to_sync = [base_date - timedelta(days=1), base_date]
+        dates_to_sync = {base_date - timedelta(days=1), base_date}
 
-        for sync_date in dates_to_sync:
+        # Auto-corrección: cualquier juego que sigue marcado "live" en la BD
+        # pero es de una fecha que ya no cae en la ventana de arriba nunca se
+        # vuelve a tocar, y se queda "en vivo" para siempre aunque ya haya
+        # terminado hace días. Se agregan esas fechas para forzar su corrección.
+        stale_live_dates = {
+            g.start_time.date()
+            for g in db.query(Game).filter(Game.league_id == league.id, Game.status == "live").all()
+        }
+        dates_to_sync |= stale_live_dates
+
+        for sync_date in sorted(dates_to_sync):
             schedule = await mlb_service.get_schedule(sync_date)
             _process_mlb_schedule(db, league, schedule)
 
         db.commit()
-        logger.info("Calendario de MLB sincronizado (ayer y hoy, base %s).", base_date)
+        logger.info("Calendario de MLB sincronizado (%d fecha(s)).", len(dates_to_sync))
     finally:
         db.close()
 
