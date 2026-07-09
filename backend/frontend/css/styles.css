@@ -465,12 +465,6 @@ button, input, select {
   gap: 6px;
 }
 
-.news-team-logo {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-}
-
 /* ---------- Partidos: marcador estilo LED ---------- */
 .game-card {
   background: var(--bfb-surface);
@@ -555,6 +549,92 @@ button, input, select {
   color: var(--bfb-muted);
   border-top: 1px dashed var(--bfb-border);
   padding-top: 10px;
+}
+
+/* ---------- Situación en vivo de béisbol (diamante, outs, última jugada) ---------- */
+.live-situation {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--bfb-border);
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.diamond-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.diamond {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.diamond-base {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--bfb-surface-alt);
+  border: 2px solid var(--bfb-muted);
+  transform: rotate(45deg);
+}
+
+.diamond-base.occupied {
+  background: var(--bfb-yellow);
+  border-color: var(--bfb-yellow);
+  box-shadow: 0 0 6px rgba(255, 196, 0, 0.6);
+}
+
+/* Home siempre "vacía" visualmente: es referencia, no una base a ocupar */
+.diamond-base.second { top: 0; left: 24px; }
+.diamond-base.first { top: 24px; left: 48px; }
+.diamond-base.third { top: 24px; left: 0; }
+.diamond-base.home { top: 48px; left: 24px; background: transparent; border-color: var(--bfb-border); }
+
+.outs-row {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--bfb-muted);
+}
+
+.out-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bfb-surface-alt);
+  border: 1px solid var(--bfb-border);
+}
+
+.out-dot.filled {
+  background: var(--bfb-loss);
+  border-color: var(--bfb-loss);
+}
+
+.live-situation-info {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--bfb-white);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.live-situation-info .count {
+  color: var(--bfb-yellow);
+}
+
+.live-situation-info .last-play {
+  color: var(--bfb-muted);
+  font-style: italic;
 }
 
 /* ---------- Barra de probabilidad + predicción ---------- */
@@ -735,6 +815,30 @@ button, input, select {
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 18px;
+}
+
+.date-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--bfb-muted);
+  flex-wrap: wrap;
+}
+
+.date-search-row input[type="date"] {
+  background: var(--bfb-surface);
+  border: 1px solid var(--bfb-border);
+  color: var(--bfb-white);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.date-search-row input[type="date"]:focus {
+  border-color: var(--bfb-yellow);
 }
 
 .stats-search select {

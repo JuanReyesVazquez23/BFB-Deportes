@@ -16,6 +16,19 @@ import httpx
 from app.core.config import settings
 
 MLB_SPORT_ID = 1  # id interno de MLB en statsapi.mlb.com (Grandes Ligas)
+
+# IDs de división de MLB: fijos y permanentes (no cambian). Confirmados
+# contra una respuesta real del endpoint /standings, que solo trae
+# {"id": ..., "link": ...} en record["division"] -- NUNCA el nombre. El
+# nombre hay que mapearlo por ID, no se puede pedir directamente.
+MLB_DIVISION_NAMES = {
+    200: "AL West",
+    201: "AL East",
+    202: "AL Central",
+    203: "NL West",
+    204: "NL East",
+    205: "NL Central",
+}
 TIMEOUT = httpx.Timeout(10.0, connect=5.0)
 
 
@@ -56,6 +69,38 @@ async def get_live_feed(game_pk: int) -> dict:
         resp = await client.get(url)
         resp.raise_for_status()
         return resp.json()
+
+
+def extract_live_situation(live_feed: dict) -> dict:
+    """
+    Extrae la situación de juego en vivo (bases, outs, bateador, pitcher,
+    última jugada) del feed GUMBO de MLB. Estructura confirmada contra la
+    documentación oficial de MLB Stats API (linescore.offense/defense).
+
+    Las bases solo aparecen como clave en el JSON cuando están ocupadas
+    (no vienen como null/false); por eso se detecta con bool(...) sobre la
+    presencia de la clave, no comparando un valor.
+    """
+    linescore = live_feed.get("liveData", {}).get("linescore", {})
+    offense = linescore.get("offense", {})
+    defense = linescore.get("defense", {})
+    current_play = live_feed.get("liveData", {}).get("plays", {}).get("currentPlay", {})
+
+    return {
+        "inning": linescore.get("currentInning"),
+        "inning_half": linescore.get("inningHalf"),  # "Top" | "Bottom"
+        "outs": linescore.get("outs", 0),
+        "balls": linescore.get("balls", 0),
+        "strikes": linescore.get("strikes", 0),
+        "bases": {
+            "first": bool(offense.get("first")),
+            "second": bool(offense.get("second")),
+            "third": bool(offense.get("third")),
+        },
+        "batter": offense.get("batter", {}).get("fullName"),
+        "pitcher": defense.get("pitcher", {}).get("fullName"),
+        "last_play": current_play.get("result", {}).get("description"),
+    }
 
 
 async def get_teams(season: int) -> dict:

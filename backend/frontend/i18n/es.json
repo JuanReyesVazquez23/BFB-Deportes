@@ -41,7 +41,14 @@
     "probablePitcher": "Pitcher probable",
     "predict": "Predice y gana puntos BFB",
     "loginToPredict": "Inicia sesión para predecir",
-    "predicted": "Ya predijiste este partido"
+    "predicted": "Ya predijiste este partido",
+    "outs": "Outs",
+    "inning": "Inning",
+    "atBat": "Al bate",
+    "pitching": "Lanza",
+    "lastPlay": "Última jugada",
+    "searchByDate": "Buscar por fecha:",
+    "today": "Hoy"
   },
   "stats": {
     "searchTeam": "Buscar equipo",

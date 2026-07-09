@@ -11,7 +11,7 @@ background) o manualmente con `python -m app.services.sync_service`.
 """
 import asyncio
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -97,6 +97,9 @@ async def sync_mlb_teams_and_standings() -> None:
         team_details_by_id = {str(t["id"]): t for t in teams_data.get("teams", [])}
 
         for record in standings_data.get("records", []):
+            division_id = record.get("division", {}).get("id")
+            division_name = mlb_service.MLB_DIVISION_NAMES.get(division_id)
+
             for team_record in record.get("teamRecords", []):
                 team_info = team_record["team"]
                 external_id = str(team_info["id"])
@@ -124,7 +127,7 @@ async def sync_mlb_teams_and_standings() -> None:
                 team.wins = wins
                 team.losses = losses
                 team.win_pct = round(wins / total, 3) if total else 0.0
-                team.division = record.get("division", {}).get("name")
+                team.division = division_name
                 team.standings_updated_at = datetime.now(timezone.utc)
 
         db.commit()
@@ -157,74 +160,84 @@ async def sync_mlb_games(target_date: date | None = None) -> None:
         if not league:
             return
 
-        target_date = target_date or datetime.now(timezone.utc).date()
-        schedule = await mlb_service.get_schedule(target_date)
+        base_date = target_date or datetime.now(timezone.utc).date()
+        # Se sincroniza "ayer" y "hoy" (no solo hoy): un juego de la Costa Oeste
+        # que empieza tarde en hora local puede caer en el día siguiente en UTC,
+        # y sin esto ese juego nunca se guardaba en la base de datos.
+        dates_to_sync = [base_date - timedelta(days=1), base_date]
 
-        for day in schedule.get("dates", []):
-            for game_data in day.get("games", []):
-                external_id = str(game_data["gamePk"])
-                home_info = game_data["teams"]["home"]["team"]
-                away_info = game_data["teams"]["away"]["team"]
-
-                home_team = (
-                    db.query(Team)
-                    .filter(Team.league_id == league.id, Team.external_id == str(home_info["id"]))
-                    .first()
-                )
-                away_team = (
-                    db.query(Team)
-                    .filter(Team.league_id == league.id, Team.external_id == str(away_info["id"]))
-                    .first()
-                )
-                if not home_team or not away_team:
-                    # Los equipos deberían existir tras sync_mlb_teams_and_standings; si no, se omite.
-                    continue
-
-                game = (
-                    db.query(Game)
-                    .filter(Game.league_id == league.id, Game.external_id == external_id)
-                    .first()
-                )
-                if not game:
-                    game = Game(
-                        league_id=league.id,
-                        external_id=external_id,
-                        home_team_id=home_team.id,
-                        away_team_id=away_team.id,
-                        start_time=datetime.fromisoformat(game_data["gameDate"].replace("Z", "+00:00")),
-                    )
-                    db.add(game)
-
-                raw_status = game_data.get("status", {}).get("abstractGameState", "Preview")
-                status_map = {"Preview": "scheduled", "Live": "live", "Final": "final"}
-                game.status = status_map.get(raw_status, "scheduled")
-
-                game.home_score = _extract_mlb_score(game_data, "home")
-                game.away_score = _extract_mlb_score(game_data, "away")
-                game.venue = game_data.get("venue", {}).get("name")
-
-                if game.status == "scheduled" and game.home_win_probability is None:
-                    game.home_win_probability = estimate_home_win_probability(
-                        home_team.win_pct or 0.5, away_team.win_pct or 0.5
-                    )
-
-                details = game.details or {}
-                if game.status == "scheduled":
-                    details.update(mlb_service.extract_probable_pitchers(game_data))
-                elif game.status == "final":
-                    details.update(mlb_service.extract_decisions(game_data))
-                    linescore = game_data.get("linescore", {})
-                    details["innings_played"] = linescore.get("currentInning")
-                elif game.status == "live":
-                    linescore = game_data.get("linescore", {})
-                    game.period_status = f"Inning {linescore.get('currentInning', '?')}"
-                game.details = details
-                game.last_synced_at = datetime.now(timezone.utc)
+        for sync_date in dates_to_sync:
+            schedule = await mlb_service.get_schedule(sync_date)
+            _process_mlb_schedule(db, league, schedule)
 
         db.commit()
-        logger.info("Calendario de MLB sincronizado para %s.", target_date)
+        logger.info("Calendario de MLB sincronizado (ayer y hoy, base %s).", base_date)
     finally:
         db.close()
+
+
+def _process_mlb_schedule(db, league, schedule: dict) -> None:
+    """Procesa un calendario (un solo día) de la MLB Stats API y actualiza/crea los juegos en BD."""
+    for day in schedule.get("dates", []):
+        for game_data in day.get("games", []):
+            external_id = str(game_data["gamePk"])
+            home_info = game_data["teams"]["home"]["team"]
+            away_info = game_data["teams"]["away"]["team"]
+
+            home_team = (
+                db.query(Team)
+                .filter(Team.league_id == league.id, Team.external_id == str(home_info["id"]))
+                .first()
+            )
+            away_team = (
+                db.query(Team)
+                .filter(Team.league_id == league.id, Team.external_id == str(away_info["id"]))
+                .first()
+            )
+            if not home_team or not away_team:
+                # Los equipos deberían existir tras sync_mlb_teams_and_standings; si no, se omite.
+                continue
+
+            game = (
+                db.query(Game)
+                .filter(Game.league_id == league.id, Game.external_id == external_id)
+                .first()
+            )
+            if not game:
+                game = Game(
+                    league_id=league.id,
+                    external_id=external_id,
+                    home_team_id=home_team.id,
+                    away_team_id=away_team.id,
+                    start_time=datetime.fromisoformat(game_data["gameDate"].replace("Z", "+00:00")),
+                )
+                db.add(game)
+
+            raw_status = game_data.get("status", {}).get("abstractGameState", "Preview")
+            status_map = {"Preview": "scheduled", "Live": "live", "Final": "final"}
+            game.status = status_map.get(raw_status, "scheduled")
+
+            game.home_score = _extract_mlb_score(game_data, "home")
+            game.away_score = _extract_mlb_score(game_data, "away")
+            game.venue = game_data.get("venue", {}).get("name")
+
+            if game.status == "scheduled" and game.home_win_probability is None:
+                game.home_win_probability = estimate_home_win_probability(
+                    home_team.win_pct or 0.5, away_team.win_pct or 0.5
+                )
+
+            details = game.details or {}
+            if game.status == "scheduled":
+                details.update(mlb_service.extract_probable_pitchers(game_data))
+            elif game.status == "final":
+                details.update(mlb_service.extract_decisions(game_data))
+                linescore = game_data.get("linescore", {})
+                details["innings_played"] = linescore.get("currentInning")
+            elif game.status == "live":
+                linescore = game_data.get("linescore", {})
+                game.period_status = f"Inning {linescore.get('currentInning', '?')}"
+            game.details = details
+            game.last_synced_at = datetime.now(timezone.utc)
 
 
 def _interpret_basketball_status(raw_status: str) -> tuple[str, str | None]:
@@ -577,9 +590,21 @@ async def sync_news() -> None:
                 continue
 
             for article in articles:
-                exists = db.query(NewsArticle).filter(NewsArticle.article_url == article["article_url"]).first()
-                if exists or not article["article_url"]:
+                if not article["article_url"]:
                     continue
+
+                existing = (
+                    db.query(NewsArticle).filter(NewsArticle.article_url == article["article_url"]).first()
+                )
+                if existing:
+                    # Se actualiza la imagen y el resumen aunque el artículo ya
+                    # exista: si el artículo se guardó antes de una mejora en
+                    # la extracción de imagen, esto permite que se "autocorrija"
+                    # en el siguiente ciclo en vez de quedarse sin imagen para siempre.
+                    existing.image_url = article["image_url"] or existing.image_url
+                    existing.summary = article["summary"] or existing.summary
+                    continue
+
                 db.add(
                     NewsArticle(
                         sport_id=sport.id,

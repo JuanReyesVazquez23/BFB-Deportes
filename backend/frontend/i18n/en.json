@@ -41,7 +41,14 @@
     "probablePitcher": "Probable pitcher",
     "predict": "Predict and earn BFB points",
     "loginToPredict": "Log in to predict",
-    "predicted": "You already predicted this game"
+    "predicted": "You already predicted this game",
+    "outs": "Outs",
+    "inning": "Inning",
+    "atBat": "At bat",
+    "pitching": "Pitching",
+    "lastPlay": "Last play",
+    "searchByDate": "Search by date:",
+    "today": "Today"
   },
   "stats": {
     "searchTeam": "Search team",

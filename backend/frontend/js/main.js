@@ -132,7 +132,6 @@ async function renderNews(sportKey) {
           ${a.image_url ? `<img src="${a.image_url}" alt="" loading="lazy">` : ''}
           <div class="card-body">
             <div class="news-meta">
-              ${a.team_logo_url ? `<img src="${a.team_logo_url}" alt="" class="news-team-logo">` : ''}
               ${t('common.source')}: ${a.source} · ${formatDate(a.published_at)}
             </div>
             <h3>${a.title}</h3>
@@ -260,6 +259,7 @@ function scoreDisplay(game) {
 
 async function renderGameCard(game) {
   const predictionRow = await renderPredictionRow(game);
+  const liveSlot = game.status === 'live' ? `<div class="live-situation-slot" data-game-id="${game.id}"></div>` : '';
   return `
     <div class="game-card">
       <div class="game-top-row">
@@ -277,6 +277,7 @@ async function renderGameCard(game) {
           <span class="team-name">${game.away_team.name}</span>
         </div>
       </div>
+      ${liveSlot}
       ${renderGameDetailsBlock(game)}
       ${predictionRow}
     </div>`;
@@ -290,15 +291,87 @@ async function renderGameGroup(titleKey, games) {
     ${cards.join('')}`;
 }
 
-async function renderGamesSection(leagueKey) {
+/* ---------- Situación en vivo (diamante, outs, última jugada) ---------- */
+const LIVE_POLL_INTERVAL_MS = 15000; // "rápido, sin refresh manual" según lo pedido
+let activeLivePolls = [];
+
+function renderDiamond(bases) {
+  return `
+    <div class="diamond-wrap">
+      <div class="diamond">
+        <div class="diamond-base second ${bases.second ? 'occupied' : ''}"></div>
+        <div class="diamond-base third ${bases.third ? 'occupied' : ''}"></div>
+        <div class="diamond-base first ${bases.first ? 'occupied' : ''}"></div>
+        <div class="diamond-base home"></div>
+      </div>
+    </div>`;
+}
+
+function renderOuts(outs) {
+  const dots = [0, 1, 2].map((i) => `<span class="out-dot ${i < outs ? 'filled' : ''}"></span>`).join('');
+  return `<div class="outs-row">${t('game.outs')}: ${dots}</div>`;
+}
+
+function renderLiveSituationHtml(situation) {
+  if (!situation) return '';
+  const halfArrow = situation.inning_half === 'Top' ? '▲' : '▼';
+  return `
+    <div class="live-situation">
+      <div class="diamond-wrap">
+        ${renderDiamond(situation.bases)}
+        ${renderOuts(situation.outs)}
+      </div>
+      <div class="live-situation-info">
+        <span>${halfArrow} ${t('game.inning')} ${situation.inning ?? '-'}</span>
+        <span class="count">${situation.balls ?? 0}-${situation.strikes ?? 0} · ${t('game.outs')} ${situation.outs ?? 0}</span>
+        ${situation.batter ? `<span>${t('game.atBat')}: ${situation.batter}</span>` : ''}
+        ${situation.pitcher ? `<span>${t('game.pitching')}: ${situation.pitcher}</span>` : ''}
+        ${situation.last_play ? `<span class="last-play">${t('game.lastPlay')}: ${situation.last_play}</span>` : ''}
+      </div>
+    </div>`;
+}
+
+async function refreshLiveSituation(gameId) {
+  const slot = document.querySelector(`.live-situation-slot[data-game-id="${gameId}"]`);
+  if (!slot) return; // la tarjeta ya no está en pantalla (cambiaron de liga/pestaña)
+
+  try {
+    const data = await api.get(`/games/${gameId}/live`);
+    if (data.status !== 'live') {
+      slot.innerHTML = ''; // el partido ya terminó: se quita el diamante en el siguiente refresh general
+      return;
+    }
+    slot.innerHTML = renderLiveSituationHtml(data.situation);
+  } catch (err) {
+    // Si falla una consulta puntual no se rompe la tarjeta; se reintenta en el siguiente ciclo.
+  }
+}
+
+function stopLivePolling() {
+  activeLivePolls.forEach((intervalId) => clearInterval(intervalId));
+  activeLivePolls = [];
+}
+
+function startLivePolling(gameIds) {
+  stopLivePolling();
+  gameIds.forEach((gameId) => {
+    refreshLiveSituation(gameId); // primera carga inmediata, sin esperar el primer intervalo
+    const intervalId = setInterval(() => refreshLiveSituation(gameId), LIVE_POLL_INTERVAL_MS);
+    activeLivePolls.push(intervalId);
+  });
+}
+
+async function renderGamesSection(leagueKey, specificDate = null) {
   const container = document.getElementById('games-container');
   container.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
   try {
-    const games = await api.get(`/leagues/${leagueKey}/games`);
+    const dateParam = specificDate ? `?game_date=${specificDate}` : '';
+    const games = await api.get(`/leagues/${leagueKey}/games${dateParam}`);
     renderTicker(games);
 
     if (!games.length) {
       container.innerHTML = `<p class="empty-state">${t('common.noGamesToday')}</p>`;
+      stopLivePolling();
       return;
     }
 
@@ -315,6 +388,7 @@ async function renderGamesSection(leagueKey) {
 
     container.innerHTML = html;
     attachPredictionHandlers(container);
+    startLivePolling(live.map((g) => g.id));
   } catch (err) {
     container.innerHTML = `<p class="empty-state">${t('common.error')}</p>`;
   }
@@ -410,6 +484,8 @@ async function populateLeagueSelector(sportKey) {
 
 async function loadLeagueData(leagueKey) {
   activeLeague = leagueKey;
+  const dateInput = document.getElementById('games-date-input');
+  if (dateInput) dateInput.value = '';
   await Promise.all([
     renderStandings(leagueKey),
     renderPlayersToday(leagueKey),
@@ -420,6 +496,20 @@ async function loadLeagueData(leagueKey) {
 function initLeagueSelector() {
   document.getElementById('league-select').addEventListener('change', (e) => {
     loadLeagueData(e.target.value);
+  });
+}
+
+function initDateSearch() {
+  const dateInput = document.getElementById('games-date-input');
+  const todayBtn = document.getElementById('games-date-today');
+
+  dateInput.addEventListener('change', (e) => {
+    if (e.target.value) renderGamesSection(activeLeague, e.target.value);
+  });
+
+  todayBtn.addEventListener('click', () => {
+    dateInput.value = '';
+    renderGamesSection(activeLeague);
   });
 }
 
@@ -439,6 +529,7 @@ async function loadSportSection(sportKey) {
       document.getElementById(id).innerHTML = `<p class="empty-state">${t('common.comingSoon')}</p>`;
     });
     renderTicker([]);
+    stopLivePolling();
     return;
   }
 
@@ -459,6 +550,7 @@ async function initApp() {
   initAuth();
   initSportTabs();
   initLeagueSelector();
+  initDateSearch();
   initStatsSearch();
   await loadSportSection('baseball');
 }
