@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_db
 from app.models.sport import Game, League
 from app.schemas.sport import GameDetailOut, GameOut
-from app.services import mlb_service
+from app.services import mlb_service, translation_service
 
 router = APIRouter(tags=["games"])
 
@@ -69,7 +69,11 @@ def get_game_detail(game_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/games/{game_id}/live")
-async def get_game_live_situation(game_id: int, db: Session = Depends(get_db)):
+async def get_game_live_situation(
+    game_id: int,
+    lang: str = Query(default="es", pattern="^(es|en)$"),
+    db: Session = Depends(get_db),
+):
     """
     Situación en vivo de un juego de MLB (bases, outs, bateador, pitcher,
     última jugada). A diferencia de /games/{id}, esto consulta a MLB
@@ -77,6 +81,10 @@ async def get_game_live_situation(game_id: int, db: Session = Depends(get_db)):
     datos ni esperar al ciclo de sincronización de 5 minutos — así el
     frontend puede sondear este endpoint cada pocos segundos y mostrar
     algo realmente "al momento" mientras el usuario ve el partido.
+
+    lang: si es "es", la descripción de "última jugada" se traduce al
+    momento (cambia en cada jugada, así que no tiene sentido guardarla
+    traducida). Nombres de jugadores nunca se traducen.
     """
     game = db.query(Game).options(joinedload(Game.league)).filter(Game.id == game_id).first()
     if not game:
@@ -98,4 +106,10 @@ async def get_game_live_situation(game_id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_502_BAD_GATEWAY, detail="No se pudo obtener el estado en vivo del partido."
         )
 
-    return {"status": game.status, "situation": mlb_service.extract_live_situation(live_feed)}
+    situation = mlb_service.extract_live_situation(live_feed)
+    if lang == "es" and situation.get("last_play"):
+        situation["last_play"] = translation_service.translate_to_spanish(situation["last_play"]) or situation[
+            "last_play"
+        ]
+
+    return {"status": game.status, "situation": situation}

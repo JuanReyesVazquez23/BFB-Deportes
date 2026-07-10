@@ -81,8 +81,8 @@
     "noStatsYet": "Aún no hay estadísticas de temporada disponibles para este jugador."
   },
   "common": {
-    "comingSoon": "Esta liga se activará al configurar su fuente de datos (API key). La estructura ya está lista.",
-    "noGamesToday": "No hay partidos programados para hoy en esta liga.",
+    "comingSoon": "La temporada de esta liga no ha comenzado todavía.",
+    "noGamesToday": "No hay partidos programados para hoy en esta liga. Puede ser que la temporada aún no haya comenzado.",
     "standingsUnavailable": "Las posiciones de esta liga todavía no están disponibles.",
     "league": "Liga",
     "loading": "Cargando...",

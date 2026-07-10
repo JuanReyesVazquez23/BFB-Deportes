@@ -31,6 +31,8 @@ logger = logging.getLogger("bfb.migrations")
 # nuevas columnas que necesiten "parchear" tablas ya existentes.
 _LIGHTWEIGHT_MIGRATIONS = [
     "ALTER TABLE teams ADD COLUMN IF NOT EXISTS short_name VARCHAR(60)",
+    "ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS title_es VARCHAR(300)",
+    "ALTER TABLE news_articles ADD COLUMN IF NOT EXISTS summary_es TEXT",
 ]
 
 

@@ -9,3 +9,4 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.9
 httpx==0.27.2
 feedparser==6.0.11
+deep-translator==1.11.4

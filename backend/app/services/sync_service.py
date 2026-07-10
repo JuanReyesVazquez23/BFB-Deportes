@@ -20,7 +20,7 @@ from app.core.database import SessionLocal
 from app.models.prediction import Prediction
 from app.models.sport import Game, League, NewsArticle, Player, Sport, Team
 from app.models.user import User
-from app.services import balldontlie_service, mlb_service, news_service
+from app.services import balldontlie_service, mlb_service, news_service, translation_service
 from app.services.probability_service import estimate_home_win_probability, points_for_prediction
 
 logger = logging.getLogger("bfb.sync")
@@ -326,8 +326,13 @@ async def sync_basketball_league(league_key: str) -> None:
                 team.city = team_info.get("city")
                 team.conference = team_info.get("conference")
                 team.division = team_info.get("division")
-                # Logo: sin CDN confirmado todavía para esta liga (ver nota en
-                # balldontlie_service.py); se deja sin definir a propósito.
+                # Logo: CDN de ESPN, confirmado en vivo SOLO para NBA usando
+                # la abreviación en minúsculas (ej. "nyk" para los Knicks).
+                # WNBA/NCAAB usan un slug de ESPN distinto que no está
+                # confirmado, así que se dejan sin logo en vez de arriesgar
+                # una URL equivocada.
+                if league_key == "nba" and team.abbreviation:
+                    team.logo_url = f"https://a.espncdn.com/i/teamlogos/nba/500/{team.abbreviation.lower()}.png"
             db.commit()
         except Exception:
             db.rollback()
@@ -612,14 +617,25 @@ async def sync_news() -> None:
                     # la extracción de imagen, esto permite que se "autocorrija"
                     # en el siguiente ciclo en vez de quedarse sin imagen para siempre.
                     existing.image_url = article["image_url"] or existing.image_url
-                    existing.summary = article["summary"] or existing.summary
+                    if article["summary"] and article["summary"] != existing.summary:
+                        existing.summary = article["summary"]
+                        existing.summary_es = None  # el resumen cambió: se re-traduce abajo
+
+                    # Solo se traduce si todavía no hay traducción (evita
+                    # volver a traducir lo mismo cada 5 minutos sin necesidad).
+                    if not existing.title_es:
+                        existing.title_es = translation_service.translate_to_spanish(existing.title)
+                    if not existing.summary_es and existing.summary:
+                        existing.summary_es = translation_service.translate_to_spanish(existing.summary)
                     continue
 
                 db.add(
                     NewsArticle(
                         sport_id=sport.id,
                         title=article["title"],
+                        title_es=translation_service.translate_to_spanish(article["title"]),
                         summary=article["summary"],
+                        summary_es=translation_service.translate_to_spanish(article["summary"]),
                         image_url=article["image_url"],
                         source=article["source"],
                         article_url=article["article_url"],

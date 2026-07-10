@@ -147,6 +147,12 @@ class NewsArticle(Base):
 
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Traducción automática al español (ver app/services/translation_service.py).
+    # Se guarda aparte del original en inglés; nunca lo sobreescribe. Si la
+    # traducción todavía no está lista o falló, queda en NULL y el
+    # endpoint usa el original en inglés como respaldo.
+    title_es: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    summary_es: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     source: Mapped[str] = mapped_column(String(100), nullable=False)
     article_url: Mapped[str] = mapped_column(String(500), unique=True, nullable=False)

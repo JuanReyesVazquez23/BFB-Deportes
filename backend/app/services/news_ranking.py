@@ -43,7 +43,7 @@ def match_team_for_article(title: str, teams: list[Team]) -> Team | None:
 
 
 def annotate_and_rank(
-    articles: list[NewsArticle], teams: list[Team], sort: str
+    articles: list[NewsArticle], teams: list[Team], sort: str, lang: str = "es"
 ) -> list[dict]:
     """
     Devuelve los artículos como dicts listos para NewsOut, con team_name/
@@ -51,6 +51,10 @@ def annotate_and_rank(
     - "recent": más nuevas primero (comportamiento original, sin cambios).
     - "trending": las que comparten equipo/tema con más noticias del lote
       actual aparecen primero (empatando por fecha como criterio secundario).
+
+    lang: si es "es", se devuelve title_es/summary_es cuando ya existan
+    (traducidos en la sincronización); si la traducción todavía no está
+    lista, se usa el original en inglés como respaldo.
     """
     matches: dict[int, Team | None] = {a.id: match_team_for_article(a.title, teams) for a in articles}
 
@@ -68,11 +72,13 @@ def annotate_and_rank(
     result = []
     for article in ordered:
         team = matches[article.id]
+        title = (article.title_es if lang == "es" else None) or article.title
+        summary = (article.summary_es if lang == "es" else None) or article.summary
         result.append(
             {
                 "id": article.id,
-                "title": article.title,
-                "summary": article.summary,
+                "title": title,
+                "summary": summary,
                 "image_url": article.image_url,
                 "source": article.source,
                 "article_url": article.article_url,

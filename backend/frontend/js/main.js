@@ -120,7 +120,7 @@ async function renderNews(sportKey) {
   try {
     // sort=trending: prioriza noticias sobre equipos de los que hay más
     // cobertura reciente (relevancia real por menciones), no solo la más nueva.
-    const articles = await api.get(`/news/${sportKey}?sort=trending`);
+    const articles = await api.get(`/news/${sportKey}?sort=trending&lang=${i18nState.lang}`);
     if (!articles.length) {
       container.innerHTML = `<p class="empty-state">${t('common.comingSoon')}</p>`;
       return;
@@ -336,7 +336,7 @@ async function refreshLiveSituation(gameId) {
   if (!slot) return; // la tarjeta ya no está en pantalla (cambiaron de liga/pestaña)
 
   try {
-    const data = await api.get(`/games/${gameId}/live`);
+    const data = await api.get(`/games/${gameId}/live?lang=${i18nState.lang}`);
     if (data.status !== 'live') {
       slot.innerHTML = ''; // el partido ya terminó: se quita el diamante en el siguiente refresh general
       return;

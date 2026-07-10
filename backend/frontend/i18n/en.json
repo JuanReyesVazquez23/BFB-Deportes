@@ -82,8 +82,8 @@
   },
   "common": {
     "league": "League",
-    "comingSoon": "This league will activate once its data source (API key) is configured. The structure is already built.",
-    "noGamesToday": "No games scheduled today for this league.",
+    "comingSoon": "This league's season hasn't started yet.",
+    "noGamesToday": "No games scheduled today for this league. The season may not have started yet.",
     "standingsUnavailable": "Standings for this league aren't available yet.",
     "loading": "Loading...",
     "error": "Something went wrong while loading data.",

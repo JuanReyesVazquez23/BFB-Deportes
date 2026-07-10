@@ -14,6 +14,7 @@ def get_sport_news(
     sport_key: str,
     limit: int = 15,
     sort: str = Query(default="recent", pattern="^(recent|trending)$"),
+    lang: str = Query(default="es", pattern="^(es|en)$"),
     db: Session = Depends(get_db),
 ):
     """
@@ -25,6 +26,10 @@ def get_sport_news(
     - "recent" (default, comportamiento original): más nuevas primero.
     - "trending": las que mencionan un equipo del que hay más noticias
       recientes aparecen primero (ver app/services/news_ranking.py).
+
+    lang: "es" (default) devuelve el título/resumen traducido si ya está
+    disponible; si la traducción todavía no se hizo, se usa el original en
+    inglés como respaldo (nunca se deja al usuario sin contenido).
     """
     sport = db.query(Sport).filter(Sport.key == sport_key).first()
     if not sport:
@@ -47,4 +52,4 @@ def get_sport_news(
         .all()
     )
 
-    return annotate_and_rank(articles, teams, sort=sort)
+    return annotate_and_rank(articles, teams, sort=sort, lang=lang)
