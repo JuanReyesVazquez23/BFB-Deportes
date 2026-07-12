@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: bfb-deportes
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENV
+        value: production
+      # Secretos: se pegan manualmente en el Dashboard de Render (Environment),
+      # nunca se escriben aquí ni se suben al repositorio.
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: BALLDONTLIE_API_KEY
+        sync: false
+      - key: FOOTBALL_DATA_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

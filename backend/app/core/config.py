@@ -60,6 +60,12 @@ class Settings(BaseSettings):
     BALLDONTLIE_API_BASE: str = "https://api.balldontlie.io"
     BALLDONTLIE_API_KEY: str = ""
 
+    # football-data.org: fútbol (EPL, La Liga, Serie A, Bundesliga, Ligue 1,
+    # Champions League, Mundial). Gratis para siempre según su propio creador,
+    # 10 peticiones/minuto. Se obtiene en https://www.football-data.org/client/register
+    FOOTBALL_DATA_API_BASE: str = "https://api.football-data.org/v4"
+    FOOTBALL_DATA_API_KEY: str = ""
+
     # --- Noticias (RSS oficiales, gratuitos, con imagen) ---
     NEWS_RSS_GENERAL: str = "https://www.espn.com/espn/rss/news"
     NEWS_RSS_MLB: str = "https://www.espn.com/espn/rss/mlb/news"

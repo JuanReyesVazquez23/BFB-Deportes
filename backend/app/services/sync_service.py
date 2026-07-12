@@ -20,7 +20,7 @@ from app.core.database import SessionLocal
 from app.models.prediction import Prediction
 from app.models.sport import Game, League, NewsArticle, Player, Sport, Team
 from app.models.user import User
-from app.services import balldontlie_service, mlb_service, news_service, translation_service
+from app.services import balldontlie_service, football_data_service, mlb_service, news_service, translation_service
 from app.services.probability_service import estimate_home_win_probability, points_for_prediction
 
 logger = logging.getLogger("bfb.sync")
@@ -34,6 +34,10 @@ CURRENT_MLB_SEASON = datetime.now(timezone.utc).year
 # también), y 20s de espaciado da ~3-4 llamadas/minuto: dentro del límite
 # con margen real, no al filo.
 BALLDONTLIE_CALL_SPACING_SECONDS = 20
+
+# football-data.org permite 10 peticiones/minuto en su plan gratuito.
+# 7s de espaciado entre CADA llamada da ~8-9/min: dentro del límite con margen.
+FOOTBALL_DATA_CALL_SPACING_SECONDS = 7
 
 
 def _get_or_create_sport(db: Session, key: str, name_es: str, name_en: str) -> Sport:
@@ -55,6 +59,12 @@ def _get_or_create_league(db: Session, sport: Sport, key: str, name: str, provid
         db.add(league)
         db.commit()
         db.refresh(league)
+    elif league.data_provider != provider:
+        # Se actualiza aunque ya exista: si cambiamos de proveedor en el
+        # código (ej. de balldontlie a football-data.org), sin esto la BD
+        # de producción se quedaría con el proveedor viejo para siempre.
+        league.data_provider = provider
+        db.commit()
     return league
 
 
@@ -72,12 +82,15 @@ def ensure_base_catalog(db: Session) -> None:
 
     # El Mundial vive aquí, como una liga más de fútbol (igual que en
     # SofaScore/OneFootball), no como una pestaña de deporte aparte.
-    _get_or_create_league(db, football, "epl", "Premier League", provider="balldontlie", is_primary=True)
-    _get_or_create_league(db, football, "laliga", "La Liga", provider="balldontlie")
-    _get_or_create_league(db, football, "seriea", "Serie A", provider="balldontlie")
-    _get_or_create_league(db, football, "bundesliga", "Bundesliga", provider="balldontlie")
-    _get_or_create_league(db, football, "ligue1", "Ligue 1", provider="balldontlie")
-    _get_or_create_league(db, football, "world_cup", "Mundial 2026", provider="balldontlie")
+    # Proveedor: football-data.org (no balldontlie) porque su nivel gratis
+    # sí cubre estas competencias sin plan de pago por deporte.
+    _get_or_create_league(db, football, "epl", "Premier League", provider="football_data_org", is_primary=True)
+    _get_or_create_league(db, football, "laliga", "La Liga", provider="football_data_org")
+    _get_or_create_league(db, football, "seriea", "Serie A", provider="football_data_org")
+    _get_or_create_league(db, football, "bundesliga", "Bundesliga", provider="football_data_org")
+    _get_or_create_league(db, football, "ligue1", "Ligue 1", provider="football_data_org")
+    _get_or_create_league(db, football, "champions_league", "Champions League", provider="football_data_org")
+    _get_or_create_league(db, football, "world_cup", "Mundial 2026", provider="football_data_org")
 
 
 async def sync_mlb_teams_and_standings() -> None:
@@ -405,6 +418,155 @@ async def sync_basketball_league(league_key: str) -> None:
         db.close()
 
 
+FOOTBALL_DATA_STATUS_MAP = {
+    "FINISHED": "final",
+    "IN_PLAY": "live",
+    "PAUSED": "live",
+    "SCHEDULED": "scheduled",
+    "TIMED": "scheduled",
+    # POSTPONED / SUSPENDED / CANCELLED: no se procesan (ver abajo, se omiten).
+}
+
+
+async def sync_football_data_league(league_key: str) -> None:
+    """
+    Sincroniza equipos, partidos y posiciones de una liga de fútbol vía
+    football-data.org. A diferencia de balldontlie, esta API SÍ incluye el
+    logo real de cada equipo en el campo "crest" — no hay que adivinar
+    ningún patrón de CDN.
+
+    Las posiciones se omiten para el Mundial a propósito (pedido explícito):
+    es una competencia por grupos, no una tabla de liga tradicional, y
+    football-data.org tampoco las expone igual para este tipo de torneo.
+    """
+    db = SessionLocal()
+    try:
+        league = db.query(League).filter(League.key == league_key).first()
+        if not league:
+            logger.warning("Liga '%s' no existe en la BD; ejecuta ensure_base_catalog primero.", league_key)
+            return
+
+        try:
+            teams_data = await football_data_service.get_teams(league_key)
+            for team_info in teams_data.get("teams", []):
+                external_id = str(team_info["id"])
+                team = (
+                    db.query(Team)
+                    .filter(Team.league_id == league.id, Team.external_id == external_id)
+                    .first()
+                )
+                if not team:
+                    team = Team(league_id=league.id, external_id=external_id, name=team_info.get("name", ""))
+                    db.add(team)
+                team.name = team_info.get("name") or team.name
+                team.short_name = team_info.get("shortName")
+                team.abbreviation = team_info.get("tla")
+                team.logo_url = team_info.get("crest")  # logo real, confirmado en la documentación oficial
+            db.commit()
+        except Exception:
+            db.rollback()
+            logger.exception("No se pudieron sincronizar equipos de '%s' (football-data.org).", league_key)
+
+        await asyncio.sleep(FOOTBALL_DATA_CALL_SPACING_SECONDS)
+
+        try:
+            matches_data = await football_data_service.get_matches(league_key)
+            for match in matches_data.get("matches", []):
+                raw_status = match.get("status")
+                if raw_status not in FOOTBALL_DATA_STATUS_MAP:
+                    continue  # postergado/suspendido/cancelado: se omite
+
+                external_id = str(match["id"])
+                home_info = match.get("homeTeam") or {}
+                away_info = match.get("awayTeam") or {}
+                if not home_info.get("id") or not away_info.get("id"):
+                    continue  # partido de eliminatoria cuyos equipos aún no se determinan
+
+                home_team = (
+                    db.query(Team)
+                    .filter(Team.league_id == league.id, Team.external_id == str(home_info["id"]))
+                    .first()
+                )
+                away_team = (
+                    db.query(Team)
+                    .filter(Team.league_id == league.id, Team.external_id == str(away_info["id"]))
+                    .first()
+                )
+                if not home_team or not away_team:
+                    continue
+
+                game = (
+                    db.query(Game)
+                    .filter(Game.league_id == league.id, Game.external_id == external_id)
+                    .first()
+                )
+                if not game:
+                    game = Game(
+                        league_id=league.id,
+                        external_id=external_id,
+                        home_team_id=home_team.id,
+                        away_team_id=away_team.id,
+                        start_time=datetime.fromisoformat(match["utcDate"].replace("Z", "+00:00")),
+                    )
+                    db.add(game)
+
+                game.status = FOOTBALL_DATA_STATUS_MAP[raw_status]
+                full_time = (match.get("score") or {}).get("fullTime") or {}
+                game.home_score = full_time.get("home")
+                game.away_score = full_time.get("away")
+                game.venue = match.get("venue")
+
+                if game.status == "live":
+                    minute = match.get("minute")
+                    game.period_status = f"{minute}'" if minute else None
+
+                if game.status == "scheduled" and game.home_win_probability is None:
+                    game.home_win_probability = estimate_home_win_probability(
+                        home_team.win_pct or 0.5, away_team.win_pct or 0.5
+                    )
+                game.last_synced_at = datetime.now(timezone.utc)
+
+            db.commit()
+            logger.info("Partidos de '%s' sincronizados (football-data.org).", league_key)
+        except Exception:
+            db.rollback()
+            logger.exception("No se pudieron sincronizar partidos de '%s' (football-data.org).", league_key)
+
+        if league_key != "world_cup":
+            # Posiciones: se omiten para el Mundial a propósito (ver
+            # docstring). Para las demás ligas, se intenta de forma segura:
+            # si football-data.org devuelve un formato distinto al esperado
+            # para alguna, se registra el error sin tumbar el resto del sync.
+            await asyncio.sleep(FOOTBALL_DATA_CALL_SPACING_SECONDS)
+            try:
+                standings_data = await football_data_service.get_standings(league_key)
+                tables = standings_data.get("standings", [])
+                total_table = next((t for t in tables if t.get("type") == "TOTAL"), tables[0] if tables else None)
+                for entry in (total_table or {}).get("table", []):
+                    team_info = entry.get("team", {})
+                    external_id = str(team_info.get("id", ""))
+                    team = (
+                        db.query(Team)
+                        .filter(Team.league_id == league.id, Team.external_id == external_id)
+                        .first()
+                    )
+                    if not team:
+                        continue
+                    played = entry.get("playedGames", 0)
+                    team.wins = entry.get("won", 0)
+                    team.losses = entry.get("lost", 0)
+                    team.ties = entry.get("draw", 0)
+                    team.win_pct = round(team.wins / played, 3) if played else 0.0
+                    team.standings_updated_at = datetime.now(timezone.utc)
+                db.commit()
+                logger.info("Posiciones de '%s' sincronizadas (football-data.org).", league_key)
+            except Exception:
+                db.rollback()
+                logger.warning("No se pudieron sincronizar posiciones de '%s' (football-data.org).", league_key)
+    finally:
+        db.close()
+
+
 async def sync_soccer_league(league_key: str) -> None:
     """
     Sincroniza equipos y partidos ("matches") de hoy de una liga de fútbol
@@ -667,15 +829,18 @@ async def run_full_sync() -> None:
             except Exception:
                 logger.exception("Fallo sincronizando la liga de basketball '%s'.", league_key)
             await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
-
-        for league_key in ("epl", "laliga", "seriea", "bundesliga", "ligue1", "world_cup"):
-            try:
-                await sync_soccer_league(league_key)
-            except Exception:
-                logger.exception("Fallo sincronizando la liga de fútbol '%s'.", league_key)
-            await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
     else:
-        logger.info("BALLDONTLIE_API_KEY no configurada: se omite la sincronización de basketball/fútbol/Mundial.")
+        logger.info("BALLDONTLIE_API_KEY no configurada: se omite la sincronización de basketball.")
+
+    if settings.FOOTBALL_DATA_API_KEY:
+        for league_key in ("epl", "laliga", "seriea", "bundesliga", "ligue1", "champions_league", "world_cup"):
+            try:
+                await sync_football_data_league(league_key)
+            except Exception:
+                logger.exception("Fallo sincronizando la liga de fútbol '%s' (football-data.org).", league_key)
+            await asyncio.sleep(FOOTBALL_DATA_CALL_SPACING_SECONDS)
+    else:
+        logger.info("FOOTBALL_DATA_API_KEY no configurada: se omite la sincronización de fútbol/Mundial.")
 
     await sync_news()
     resolve_finished_predictions()

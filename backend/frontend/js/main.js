@@ -167,13 +167,7 @@ function renderGameDetailsBlock(game) {
   if (d.save_pitcher) rows.push(`${t('game.savePitcher')}: ${d.save_pitcher}`);
   if (!rows.length) return '';
 
-  const id = `details-${game.id}`;
-  return `
-    <button class="game-details-toggle" onclick="document.getElementById('${id}').classList.toggle('hidden')">
-      ${t('game.details')}
-    </button>
-    <div class="game-details-box hidden" id="${id}">${rows.join(' · ')}</div>
-  `;
+  return `<div class="game-details-box">${rows.join(' · ')}</div>`;
 }
 
 async function renderPredictionRow(game) {

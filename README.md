@@ -26,7 +26,8 @@ Todo el código fue revisado (`py_compile` en Python, `node --check` en JS, vali
 ## 2. Por qué esta arquitectura
 
 - **MLB Stats API** (oficial, gratuita, sin key): fuente de béisbol. Incluye pitcher ganador/perdedor/salvamento, algo que una API genérica no siempre da con este nivel de detalle gratis.
-- **balldontlie.io**: una sola API para NBA, WNBA, NCAAB y las principales ligas de fútbol (EPL, La Liga, Serie A, Bundesliga, Ligue 1, MLS, Champions League) además del Mundial. Simplifica mucho tener un solo proveedor para "buscar otras ligas". Tiene nivel gratuito limitado en peticiones/minuto; por eso el backend **cachea todo en PostgreSQL** y sincroniza cada 5 minutos en vez de llamar a la API en cada clic del usuario.
+- **balldontlie.io**: basketball (NBA, WNBA, NCAAB). Su nivel gratuito **no** cubre la mayoría de ligas de fútbol ni el Mundial (da 401 Unauthorized si se intenta) — por eso el fútbol usa un proveedor distinto.
+- **football-data.org**: fútbol (EPL, La Liga, Serie A, Bundesliga, Ligue 1, Champions League) y el Mundial. Gratis para siempre según su propio creador, sin tarjeta de crédito, e incluye el logo real de cada equipo directo en la respuesta.
 - **ESPN RSS**: noticias reales con imagen, gratis, respetando sus términos (se enlaza siempre al artículo completo y se atribuye la fuente).
 
 Esta es la opción que consideré más equilibrada entre costo, calidad de datos y mantenimiento. Si prefieres otro proveedor (ej. API-Football de pago para más detalle de fútbol), el código está aislado en `app/services/` y se puede sustituir sin tocar el resto del sistema.
@@ -77,12 +78,16 @@ Abre **http://localhost:8000** — el mismo servidor sirve el frontend (carpeta 
 
 La primera vez que arranca, el servidor sincroniza automáticamente equipos, posiciones y calendario de la MLB, y noticias. La sincronización se repite cada 5 minutos en segundo plano.
 
-### Activar fútbol, basketball y Mundial
+### Activar basketball
 1. Crea una cuenta gratuita en https://balldontlie.io
 2. Copia tu API key a `BALLDONTLIE_API_KEY` en `.env`
+
+### Activar fútbol y Mundial
+1. Crea una cuenta gratuita en https://www.football-data.org/client/register (sin tarjeta)
+2. Copia tu token a `FOOTBALL_DATA_API_KEY` en `.env`
 3. Reinicia el servidor
 
-> **Nota:** ya verifiqué contra la documentación pública vigente de balldontlie que "La Liga" tiene su propio segmento de ruta (`laliga`, antes apuntaba mal a `epl` — corregido) y que EPL usa una versión de API distinta (`v2`) para varios endpoints; ambos casos ya están reflejados en `app/services/balldontlie_service.py`. Aun así, antes de producción haz una prueba real con tu API key contra cada liga que vayas a activar, porque balldontlie sigue evolucionando estos productos.
+> **Nota:** las posiciones del Mundial no se sincronizan a propósito (es una competencia por grupos, no una tabla de liga tradicional) — solo se muestran sus partidos.
 
 ---
 
@@ -123,6 +128,43 @@ Railway provee PostgreSQL como servicio y te entrega la conexión mediante varia
 - Nunca reutilices el `SECRET_KEY` de ejemplo ni la API key que ya compartiste en este chat — genera/rota claves nuevas para el entorno real.
 - Railway gestiona el volumen de PostgreSQL automáticamente; no necesitas configurar backups para probar, pero revisa la política de backups de tu plan antes de usar datos reales de usuarios.
 - Si más adelante escalas a varios workers/instancias, reemplaza el rate limiter en memoria (`app/core/rate_limit.py`) por uno con Redis, como ya se anota en ese archivo.
+
+---
+
+## 5.1. Despliegue en Render + Neon (alternativa a Railway)
+
+Este proyecto también se puede desplegar en **Render** (hosting del backend) + **Neon** (PostgreSQL). El repo ya incluye `render.yaml` en la raíz, así que Render detecta la configuración automáticamente sin que tengas que llenar formularios a mano.
+
+### Paso a paso
+
+1. **Crea la base de datos en Neon**: entra a https://neon.tech → crea un proyecto → copia el **connection string** que te dan (ya viene en formato `postgresql://usuario:password@ep-xxxx.región.aws.neon.tech/dbname?sslmode=require` — cópialo tal cual, con el `?sslmode=require` incluido, Neon lo exige).
+
+2. **Crea el servicio en Render**:
+   - Ve a https://dashboard.render.com → **New** → **Blueprint**
+   - Conecta tu repositorio de GitHub
+   - Render detecta `render.yaml` solo y te muestra el servicio `bfb-deportes` listo para crear (ya configurado con Root Directory=backend, comando de build y de arranque — no necesitas tocar esos campos)
+
+3. **Variables de entorno**: en la sección *Environment* del servicio, pega:
+   ```
+   DATABASE_URL=<el connection string de Neon del paso 1>
+   SECRET_KEY=<genera una con: python -c "import secrets; print(secrets.token_hex(32))">
+   BALLDONTLIE_API_KEY=<tu key de balldontlie, para basketball>
+   FOOTBALL_DATA_API_KEY=<tu token de football-data.org, para fútbol/Mundial>
+   CORS_ORIGINS=["https://TU-APP.onrender.com"]
+   ```
+   `ENV=production` ya viene incluido en `render.yaml`, no hace falta agregarlo. Igual que en Railway, `CORS_ORIGINS` debe ser un arreglo JSON válido (con corchetes y comillas), y puedes actualizarlo con tu dominio real de Render una vez que te lo asignen.
+
+4. **Deploy**. Render instala dependencias, crea las tablas automáticamente en tu base de Neon al arrancar, y empieza a sincronizar.
+
+### Diferencia importante con Railway: el plan gratis de Render se "duerme"
+
+En el **plan gratis**, Render apaga el servicio tras ~15 minutos sin tráfico. Esto significa:
+- El sitio tarda unos segundos más en responder la primera vez que alguien lo visita después de estar dormido (arranca de nuevo).
+- La sincronización automática cada 5 minutos (MLB, basketball, fútbol, noticias) **solo corre mientras el servicio está despierto** — si nadie visita el sitio por un rato, el ciclo de sincronización se pausa hasta que alguien vuelva a entrar.
+- Esto no es un error del proyecto, es el comportamiento normal del plan gratis de Render. Si esto llega a ser un problema, la solución es subir a un plan pago (Starter en adelante), que no se duerme.
+
+### Nota sobre `.python-version`
+Se agregó una copia de este archivo tanto en la raíz del repositorio como dentro de `backend/`, porque la documentación de Render no deja 100% claro si lo busca en la raíz real del repo o en el Root Directory del servicio — así queda cubierto de cualquier forma, sin arriesgar el mismo tipo de error de versión de Python que tuvimos al desplegar en Railway.
 
 ---
 

@@ -269,8 +269,15 @@ button, input, select {
   animation: ticker-scroll 40s linear infinite;
 }
 
-.live-ticker:hover .live-ticker-track {
-  animation-play-state: paused;
+/* El pausado al pasar el mouse solo aplica en dispositivos con puntero real
+   (mouse). En pantallas táctiles, :hover puede activarse con un toque y
+   quedarse atascado en pausa para siempre (no existe un "quitar el mouse
+   de encima" en un teléfono) — por eso el ticker se congelaba en algunos
+   teléfonos/navegadores específicos y en otros no. */
+@media (hover: hover) and (pointer: fine) {
+  .live-ticker:hover .live-ticker-track {
+    animation-play-state: paused;
+  }
 }
 
 @keyframes ticker-scroll {
@@ -529,17 +536,6 @@ button, input, select {
   min-width: 90px;
   text-align: center;
   letter-spacing: 0.05em;
-}
-
-.game-details-toggle {
-  margin-top: 10px;
-  font-size: 12px;
-  color: var(--bfb-yellow);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
 }
 
 .game-details-box {
