@@ -152,7 +152,9 @@ Este proyecto también se puede desplegar en **Render** (hosting del backend) + 
    FOOTBALL_DATA_API_KEY=<tu token de football-data.org, para fútbol/Mundial>
    CORS_ORIGINS=["https://TU-APP.onrender.com"]
    ```
-   `ENV=production` ya viene incluido en `render.yaml`, no hace falta agregarlo. Igual que en Railway, `CORS_ORIGINS` debe ser un arreglo JSON válido (con corchetes y comillas), y puedes actualizarlo con tu dominio real de Render una vez que te lo asignen.
+   `ENV=production` y `PYTHON_VERSION=3.12.8` ya vienen incluidos en `render.yaml`, no hace falta agregarlos a mano. Igual que en Railway, `CORS_ORIGINS` debe ser un arreglo JSON válido (con corchetes y comillas), y puedes actualizarlo con tu dominio real de Render una vez que te lo asignen.
+
+   ⚠️ **Si tu servicio ya existía antes de este cambio** (creado antes de que `render.yaml` incluyera `PYTHON_VERSION`), Render puede no releer automáticamente ese campo nuevo. Verifícalo a mano: *Environment* → agrega `PYTHON_VERSION` = `3.12.8` directamente, y vuelve a desplegar (*Manual Deploy* → *Deploy latest commit*). Esto corrige un error real que vimos (`psycopg2` incompatible con Python 3.14, que Render usa por defecto si no se fija la versión).
 
 4. **Deploy**. Render instala dependencias, crea las tablas automáticamente en tu base de Neon al arrancar, y empieza a sincronizar.
 
