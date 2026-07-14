@@ -35,13 +35,13 @@ def list_games(
         ).filter(Game.start_time < datetime.combine(game_date, datetime.max.time(), tzinfo=timezone.utc))
     else:
         # Sin fecha explícita ("hoy" por defecto): se usa una ventana móvil de
-        # 24h hacia atrás y 20h hacia adelante, en vez de un día calendario
+        # 24h hacia atrás y 36h hacia adelante, en vez de un día calendario
         # UTC fijo. Un día calendario fijo pierde partidos que cruzan la
         # medianoche UTC (ej. un juego de la Costa Oeste en vivo a la 1 AM UTC
         # queda fuera de "hoy" aunque esté sucediendo ahora mismo).
         now = datetime.now(timezone.utc)
         query = query.filter(Game.start_time >= now - timedelta(hours=24)).filter(
-            Game.start_time <= now + timedelta(hours=20)
+            Game.start_time <= now + timedelta(hours=36)
         )
 
     if status_filter:

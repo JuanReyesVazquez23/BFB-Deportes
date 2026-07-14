@@ -177,7 +177,10 @@ async def sync_mlb_games(target_date: date | None = None) -> None:
         # Se sincroniza "ayer" y "hoy" (no solo hoy): un juego de la Costa Oeste
         # que empieza tarde en hora local puede caer en el día siguiente en UTC,
         # y sin esto ese juego nunca se guardaba en la base de datos.
-        dates_to_sync = {base_date - timedelta(days=1), base_date}
+        # También se incluye "mañana": sin esto, partidos próximos (para
+        # predecir, o eventos especiales como el Juego de Estrellas) no
+        # aparecían hasta el mismo día.
+        dates_to_sync = {base_date - timedelta(days=1), base_date, base_date + timedelta(days=1)}
 
         # Auto-corrección: cualquier juego que sigue marcado "live" en la BD
         # pero es de una fecha que ya no cae en la ventana de arriba nunca se
@@ -217,9 +220,24 @@ def _process_mlb_schedule(db, league, schedule: dict) -> None:
                 .filter(Team.league_id == league.id, Team.external_id == str(away_info["id"]))
                 .first()
             )
-            if not home_team or not away_team:
-                # Los equipos deberían existir tras sync_mlb_teams_and_standings; si no, se omite.
-                continue
+            # Si el equipo no existe (ej. "American League"/"National League" en
+            # el Juego de Estrellas, que no son franquicias reales), se crea un
+            # registro mínimo con el id y nombre que la propia MLB da en ese
+            # momento, en vez de descartar el partido completo. Los 30 equipos
+            # reales ya vienen completos desde sync_mlb_teams_and_standings;
+            # esto solo cubre casos especiales como este.
+            if not home_team:
+                home_team = Team(
+                    league_id=league.id, external_id=str(home_info["id"]), name=home_info.get("name", "TBD")
+                )
+                db.add(home_team)
+                db.flush()
+            if not away_team:
+                away_team = Team(
+                    league_id=league.id, external_id=str(away_info["id"]), name=away_info.get("name", "TBD")
+                )
+                db.add(away_team)
+                db.flush()
 
             game = (
                 db.query(Game)
@@ -298,6 +316,21 @@ def _interpret_soccer_status(raw_status: str, status_detail: str | None) -> tupl
     return "live", status_detail or raw_status
 
 
+# ESPN usa su propio slug para el logo de algunos equipos, distinto de la
+# abreviación estándar que da balldontlie. "GSW" -> "gs" está CONFIRMADO
+# contra datos reales de ESPN; el resto sigue la misma convención bien
+# documentada desde hace años, pero si algún equipo de esta lista sigue
+# sin logo, es la primera sospecha a revisar.
+NBA_ESPN_LOGO_SLUG_OVERRIDES = {
+    "GSW": "gs",  # Golden State Warriors (confirmado)
+    "WAS": "wsh",  # Washington Wizards
+    "NOP": "no",  # New Orleans Pelicans
+    "NYK": "ny",  # New York Knicks
+    "UTA": "utah",  # Utah Jazz
+    "SAS": "sa",  # San Antonio Spurs
+}
+
+
 async def sync_basketball_league(league_key: str) -> None:
     """
     Sincroniza equipos y partidos de hoy de una liga de basketball vía
@@ -339,13 +372,13 @@ async def sync_basketball_league(league_key: str) -> None:
                 team.city = team_info.get("city")
                 team.conference = team_info.get("conference")
                 team.division = team_info.get("division")
-                # Logo: CDN de ESPN, confirmado en vivo SOLO para NBA usando
-                # la abreviación en minúsculas (ej. "nyk" para los Knicks).
-                # WNBA/NCAAB usan un slug de ESPN distinto que no está
-                # confirmado, así que se dejan sin logo en vez de arriesgar
-                # una URL equivocada.
+                # Logo: CDN de ESPN, confirmado en vivo SOLO para NBA. Algunos
+                # equipos usan un slug distinto a su abreviación estándar (ver
+                # NBA_ESPN_LOGO_SLUG_OVERRIDES arriba); para el resto, la
+                # abreviación en minúsculas coincide con el slug de ESPN.
                 if league_key == "nba" and team.abbreviation:
-                    team.logo_url = f"https://a.espncdn.com/i/teamlogos/nba/500/{team.abbreviation.lower()}.png"
+                    slug = NBA_ESPN_LOGO_SLUG_OVERRIDES.get(team.abbreviation, team.abbreviation.lower())
+                    team.logo_url = f"https://a.espncdn.com/i/teamlogos/nba/500/{slug}.png"
             db.commit()
         except Exception:
             db.rollback()
