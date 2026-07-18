@@ -21,7 +21,7 @@ import httpx
 
 from app.core.config import settings
 
-TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+from app.services.http_client import DEFAULT_HTTP_TIMEOUT as TIMEOUT
 
 # Códigos de competencia de football-data.org (confirmados en su documentación oficial).
 COMPETITION_CODES = {

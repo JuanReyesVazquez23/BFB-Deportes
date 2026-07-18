@@ -101,7 +101,7 @@ async function fetchSuggestions(query) {
     return;
   }
   try {
-    const results = await api.get(`/stats/search?q=${encodeURIComponent(query)}&type=${statsSelectedType}`);
+    const results = await api.get(`/stats/search?q=${encodeURIComponent(query)}&type=${statsSelectedType}&sport=${activeSport}`);
     if (!results.length) {
       suggestionsBox.innerHTML = `<div class="stats-suggestion-empty">${t('stats.noMatches')}</div>`;
       suggestionsBox.classList.remove('hidden');

@@ -42,37 +42,41 @@ async function renderStandings(leagueKey) {
   const container = document.getElementById('standings-container');
   container.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
   try {
-    const teams = await api.get(`/leagues/${leagueKey}/standings`);
-    if (!teams.length) {
+    const groups = await api.get(`/leagues/${leagueKey}/standings`);
+    if (!groups.length || !groups.some((g) => g.teams.length)) {
       container.innerHTML = `<p class="empty-state">${t('common.standingsUnavailable')}</p>`;
       return;
     }
-    const rows = teams
-      .map(
-        (team) => `
-        <tr>
-          <td>
-            <div class="team-cell">
-              <button class="fav-star" data-fav-type="team" data-fav-id="${team.id}" aria-label="favorito">★</button>
-              ${team.logo_url ? `<img src="${team.logo_url}" alt="">` : ''}
-              ${team.name}
-            </div>
-          </td>
-          <td>${team.wins}</td>
-          <td>${team.losses}</td>
-          <td>${(team.win_pct * 100).toFixed(1)}%</td>
-          <td>${team.division ?? '-'}</td>
-        </tr>`
-      )
-      .join('');
 
-    container.innerHTML = `
-      <table class="standings-table">
-        <thead>
-          <tr><th>Equipo</th><th>G</th><th>P</th><th>%</th><th>División</th></tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>`;
+    container.innerHTML = groups
+      .map((group) => {
+        const rows = group.teams
+          .map(
+            (team) => `
+            <tr>
+              <td>
+                <div class="team-cell">
+                  <button class="fav-star" data-fav-type="team" data-fav-id="${team.id}" aria-label="favorito">★</button>
+                  ${team.logo_url ? `<img src="${team.logo_url}" alt="">` : ''}
+                  ${team.name}
+                </div>
+              </td>
+              <td>${team.wins}</td>
+              <td>${team.losses}</td>
+              <td>${team.games_back === 0 ? '-' : team.games_back}</td>
+            </tr>`
+          )
+          .join('');
+        return `
+          <h3 class="standings-group-title">${group.group_name}</h3>
+          <table class="standings-table">
+            <thead>
+              <tr><th>${t('stats.team')}</th><th>G</th><th>P</th><th>GB</th></tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      })
+      .join('');
 
     markFavoriteStars(container);
   } catch (err) {
@@ -490,11 +494,22 @@ async function loadLeagueData(leagueKey) {
   activeLeague = leagueKey;
   const dateInput = document.getElementById('games-date-input');
   if (dateInput) dateInput.value = '';
-  await Promise.all([
-    renderStandings(leagueKey),
-    renderPlayersToday(leagueKey),
-    renderGamesSection(leagueKey),
-  ]);
+
+  const standingsSection = document.getElementById('standings-section');
+  const playersSection = document.getElementById('players-today-section');
+
+  // El Mundial es por grupos, no tabla de liga tradicional: no se muestran posiciones.
+  const hideStandings = leagueKey === 'world_cup';
+  standingsSection.classList.toggle('hidden', hideStandings);
+
+  // "Jugadores Hoy" (pitchers probables) solo aplica a béisbol.
+  const hidePlayersToday = activeSport !== 'baseball';
+  playersSection.classList.toggle('hidden', hidePlayersToday);
+
+  const tasks = [renderGamesSection(leagueKey)];
+  if (!hideStandings) tasks.push(renderStandings(leagueKey));
+  if (!hidePlayersToday) tasks.push(renderPlayersToday(leagueKey));
+  await Promise.all(tasks);
 }
 
 function initLeagueSelector() {
@@ -529,6 +544,8 @@ async function loadSportSection(sportKey) {
 
   if (!isReady) {
     document.querySelector('.league-select-row').classList.add('hidden');
+    document.getElementById('standings-section').classList.remove('hidden');
+    document.getElementById('players-today-section').classList.remove('hidden');
     ['standings-container', 'players-today-container', 'games-container'].forEach((id) => {
       document.getElementById(id).innerHTML = `<p class="empty-state">${t('common.comingSoon')}</p>`;
     });

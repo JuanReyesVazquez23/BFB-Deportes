@@ -228,13 +228,19 @@ def _process_mlb_schedule(db, league, schedule: dict) -> None:
             # esto solo cubre casos especiales como este.
             if not home_team:
                 home_team = Team(
-                    league_id=league.id, external_id=str(home_info["id"]), name=home_info.get("name", "TBD")
+                    league_id=league.id,
+                    external_id=str(home_info["id"]),
+                    name=home_info.get("name", "TBD"),
+                    is_placeholder=True,
                 )
                 db.add(home_team)
                 db.flush()
             if not away_team:
                 away_team = Team(
-                    league_id=league.id, external_id=str(away_info["id"]), name=away_info.get("name", "TBD")
+                    league_id=league.id,
+                    external_id=str(away_info["id"]),
+                    name=away_info.get("name", "TBD"),
+                    is_placeholder=True,
                 )
                 db.add(away_team)
                 db.flush()

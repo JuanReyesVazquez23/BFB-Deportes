@@ -42,6 +42,19 @@ class TeamOut(BaseModel):
         from_attributes = True
 
 
+class StandingsTeamOut(TeamOut):
+    """Igual que TeamOut, más 'games_back': partidos detrás del líder de su división/grupo."""
+
+    games_back: float
+
+
+class StandingsGroupOut(BaseModel):
+    """Un grupo de posiciones (ej. una división de MLB, o toda la liga si no aplica división)."""
+
+    group_name: str
+    teams: list[StandingsTeamOut]
+
+
 class PlayerOut(BaseModel):
     id: int
     full_name: str

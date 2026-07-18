@@ -350,6 +350,19 @@ button, input, select {
 }
 
 /* ---------- Tabla de posiciones ---------- */
+.standings-group-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--bfb-yellow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 18px 0 6px;
+}
+
+.standings-group-title:first-child {
+  margin-top: 0;
+}
+
 .standings-table {
   width: 100%;
   border-collapse: collapse;
@@ -721,6 +734,7 @@ button, input, select {
   width: 100%;
   max-width: 380px;
   padding: 26px;
+  position: relative;
 }
 
 .modal h2 {
@@ -799,10 +813,6 @@ button, input, select {
   color: var(--bfb-muted);
   font-size: 20px;
   cursor: pointer;
-}
-
-.modal {
-  position: relative;
 }
 
 /* ---------- Estadísticas ---------- */

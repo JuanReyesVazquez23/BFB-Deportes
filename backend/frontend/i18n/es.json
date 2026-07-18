@@ -51,6 +51,7 @@
     "today": "Hoy"
   },
   "stats": {
+    "team": "Equipo",
     "searchTeam": "Buscar equipo",
     "searchPlayer": "Buscar jugador",
     "placeholderTeam": "Escribe el nombre de un equipo...",

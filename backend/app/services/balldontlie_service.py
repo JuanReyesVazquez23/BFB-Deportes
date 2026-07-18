@@ -38,7 +38,7 @@ import httpx
 
 from app.core.config import settings
 
-TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+from app.services.http_client import DEFAULT_HTTP_TIMEOUT as TIMEOUT
 
 # Mapeo de "key" interna de la liga -> segmento de ruta en la API de balldontlie.
 LEAGUE_PATHS = {

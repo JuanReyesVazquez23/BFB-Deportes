@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_db
-from app.models.sport import Game, Player, Team
+from app.models.sport import Game, League, Player, Sport, Team
 from app.services import mlb_service
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -14,17 +14,28 @@ router = APIRouter(prefix="/stats", tags=["stats"])
 def search_entities(
     q: str = Query(min_length=2, description="Nombre a buscar (mínimo 2 caracteres)"),
     entity_type: str = Query(default="team", alias="type", pattern="^(team|player)$"),
+    sport_key: str = Query(alias="sport", pattern="^(baseball|football|basketball)$"),
     db: Session = Depends(get_db),
 ):
     """
     Búsqueda por nombre para el autocompletado del buscador de estadísticas.
     Nunca se busca por ID: el usuario escribe un nombre y elige de la lista.
+
+    IMPORTANTE: "sport" es obligatorio y nunca se cruzan deportes — si la
+    página está en Fútbol, jamás debe aparecer un resultado de béisbol o
+    basketball, y viceversa.
     """
+    sport = db.query(Sport).filter(Sport.key == sport_key).first()
+    if not sport:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deporte no encontrado.")
+
     if entity_type == "player":
         matches = (
             db.query(Player)
+            .join(Team, Player.team_id == Team.id)
+            .join(League, Team.league_id == League.id)
             .options(joinedload(Player.team))
-            .filter(Player.full_name.ilike(f"%{q}%"))
+            .filter(Player.full_name.ilike(f"%{q}%"), League.sport_id == sport.id)
             .limit(10)
             .all()
         )
@@ -38,7 +49,13 @@ def search_entities(
             for p in matches
         ]
 
-    matches = db.query(Team).filter(Team.name.ilike(f"%{q}%")).limit(10).all()
+    matches = (
+        db.query(Team)
+        .join(League, Team.league_id == League.id)
+        .filter(Team.name.ilike(f"%{q}%"), Team.is_placeholder.is_(False), League.sport_id == sport.id)
+        .limit(10)
+        .all()
+    )
     return [
         {
             "id": t.id,

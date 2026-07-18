@@ -60,6 +60,10 @@ class Team(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     league_id: Mapped[int] = mapped_column(ForeignKey("leagues.id"), nullable=False)
     external_id: Mapped[str] = mapped_column(String(50), nullable=False)  # id en la API externa
+    # True solo para equipos auto-creados que no son franquicias reales
+    # (ej. "American League"/"National League" del Juego de Estrellas MLB).
+    # Se excluyen de posiciones y de la búsqueda de estadísticas.
+    is_placeholder: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     # Nombre corto/mascota (ej. "Yankees", sin la ciudad). Se usa para detectar

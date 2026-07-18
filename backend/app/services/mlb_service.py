@@ -14,6 +14,7 @@ from datetime import date
 import httpx
 
 from app.core.config import settings
+from app.services.http_client import DEFAULT_HTTP_TIMEOUT as TIMEOUT
 
 MLB_SPORT_ID = 1  # id interno de MLB en statsapi.mlb.com (Grandes Ligas)
 
@@ -29,7 +30,6 @@ MLB_DIVISION_NAMES = {
     204: "NL East",
     205: "NL Central",
 }
-TIMEOUT = httpx.Timeout(10.0, connect=5.0)
 
 
 async def get_standings(season: int) -> dict:
