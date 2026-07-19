@@ -79,7 +79,10 @@
     "strikeouts": "Strikeouts",
     "saves": "Saves",
     "inningsPitched": "Innings Pitched",
-    "noStatsYet": "No season stats available yet for this player."
+    "noStatsYet": "No season stats available yet for this player.",
+    "compareToggle": "Compare 2 players",
+    "compareFirstPicked": "You picked",
+    "compareNowPickSecond": "Now search for the second player."
   },
   "common": {
     "league": "League",

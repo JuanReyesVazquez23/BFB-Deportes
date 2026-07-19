@@ -79,7 +79,10 @@
     "strikeouts": "Ponches",
     "saves": "Salvamentos",
     "inningsPitched": "Innings lanzados",
-    "noStatsYet": "Aún no hay estadísticas de temporada disponibles para este jugador."
+    "noStatsYet": "Aún no hay estadísticas de temporada disponibles para este jugador.",
+    "compareToggle": "Comparar 2 jugadores",
+    "compareFirstPicked": "Elegiste",
+    "compareNowPickSecond": "Ahora busca al segundo jugador."
   },
   "common": {
     "comingSoon": "La temporada de esta liga no ha comenzado todavía.",

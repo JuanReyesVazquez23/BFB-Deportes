@@ -16,7 +16,9 @@
   <meta name="apple-mobile-web-app-title" content="BFB Deportes">
   <meta name="theme-color" content="#0b0b0c">
 
-  <link rel="stylesheet" href="css/styles.css">
+  <!-- Cache-busting: sube el número ?v= en CSS/JS cada vez que cambien,
+       para que el navegador no siga usando una versión vieja cacheada. -->
+  <link rel="stylesheet" href="css/styles.css?v=20260718b">
 </head>
 <body>
 
@@ -112,6 +114,11 @@
           <div id="stats-suggestions" class="stats-suggestions hidden"></div>
         </div>
       </div>
+      <label class="stats-compare-toggle hidden" id="stats-compare-toggle-row">
+        <input type="checkbox" id="stats-compare-toggle">
+        <span data-i18n="stats.compareToggle">Comparar 2 jugadores</span>
+      </label>
+      <div class="stats-compare-status hidden" id="stats-compare-status"></div>
       <div class="stats-result" id="stats-result"></div>
     </section>
 
@@ -154,10 +161,10 @@
     </div>
   </div>
 
-  <script src="js/api.js"></script>
-  <script src="js/i18n.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/stats.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/api.js?v=20260718b"></script>
+  <script src="js/i18n.js?v=20260718b"></script>
+  <script src="js/auth.js?v=20260718b"></script>
+  <script src="js/stats.js?v=20260718b"></script>
+  <script src="js/main.js?v=20260718b"></script>
 </body>
 </html>

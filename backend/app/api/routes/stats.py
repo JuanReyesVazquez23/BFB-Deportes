@@ -111,17 +111,12 @@ def team_stats(team_id: int, db: Session = Depends(get_db)):
     }
 
 
-@router.get("/player/{player_id}")
-async def player_stats(player_id: int, db: Session = Depends(get_db)):
+async def _build_player_profile(player_id: int, db: Session) -> dict:
     """
-    Perfil real de un jugador: posición, número, equipo, y sus estadísticas
-    reales de la temporada actual (home runs, hits, OBP, etc. si es
-    bateador; wins, ERA, ponches si es pitcher).
-
-    Los números se consultan en vivo a MLB Stats API en el momento de la
-    búsqueda (solo para jugadores de esa liga por ahora). Si la consulta
-    externa falla, se muestra igual el perfil del jugador sin números en
-    vez de romper la página completa.
+    Construye el perfil completo de un jugador (posición, equipo, y
+    estadísticas reales si es de MLB). Función compartida entre el
+    endpoint de un solo jugador y el de comparación, para no duplicar
+    la misma lógica dos veces.
     """
     player = (
         db.query(Player)
@@ -157,6 +152,57 @@ async def player_stats(player_id: int, db: Session = Depends(get_db)):
         }
         if player.team
         else None,
+        "sport_id": player.team.league.sport_id if player.team and player.team.league else None,
         "batting_stats": batting_stats,
         "pitching_stats": pitching_stats,
     }
+
+
+@router.get("/player/{player_id}")
+async def player_stats(player_id: int, db: Session = Depends(get_db)):
+    """
+    Perfil real de un jugador: posición, número, equipo, y sus estadísticas
+    reales de la temporada actual (home runs, hits, OBP, etc. si es
+    bateador; wins, ERA, ponches si es pitcher).
+
+    Los números se consultan en vivo a MLB Stats API en el momento de la
+    búsqueda (solo para jugadores de esa liga por ahora). Si la consulta
+    externa falla, se muestra igual el perfil del jugador sin números en
+    vez de romper la página completa.
+    """
+    profile = await _build_player_profile(player_id, db)
+    profile.pop("sport_id", None)  # detalle interno, no se expone en el perfil individual
+    return profile
+
+
+@router.get("/players/compare")
+async def compare_players(
+    id_a: int = Query(description="ID del primer jugador"),
+    id_b: int = Query(description="ID del segundo jugador"),
+    db: Session = Depends(get_db),
+):
+    """
+    Compara dos jugadores lado a lado. NUNCA se permite comparar jugadores
+    de deportes distintos (ej. un jugador de MLB contra uno de NBA) — se
+    valida explícitamente y se rechaza con 400 si no coinciden.
+    """
+    if id_a == id_b:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Elige dos jugadores distintos.")
+
+    player_a = await _build_player_profile(id_a, db)
+    player_b = await _build_player_profile(id_b, db)
+
+    if player_a["sport_id"] is None or player_b["sport_id"] is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pudo determinar el deporte de uno de los jugadores.",
+        )
+    if player_a["sport_id"] != player_b["sport_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pueden comparar jugadores de deportes distintos.",
+        )
+
+    player_a.pop("sport_id", None)
+    player_b.pop("sport_id", None)
+    return {"player_a": player_a, "player_b": player_b}
