@@ -80,7 +80,8 @@
     "saves": "Saves",
     "inningsPitched": "Innings Pitched",
     "noStatsYet": "No season stats available yet for this player.",
-    "compareToggle": "Compare 2 players",
+    "comparePlayersToggle": "Compare 2 players",
+    "compareTeamsToggle": "Compare 2 teams",
     "compareFirstPicked": "You picked",
     "compareNowPickSecond": "Now search for the second player."
   },

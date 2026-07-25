@@ -68,10 +68,13 @@ def search_entities(
     ]
 
 
-@router.get("/team/{team_id}")
-def team_stats(team_id: int, db: Session = Depends(get_db)):
-    """Perfil real de un equipo: récord, posición y sus últimos partidos jugados."""
-    team = db.get(Team, team_id)
+def _build_team_profile(team_id: int, db: Session) -> dict:
+    """
+    Construye el perfil completo de un equipo (récord, posición y sus
+    últimos partidos). Función compartida entre el endpoint de un solo
+    equipo y el de comparación, para no duplicar la misma lógica dos veces.
+    """
+    team = db.query(Team).options(joinedload(Team.league)).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipo no encontrado.")
 
@@ -104,11 +107,53 @@ def team_stats(team_id: int, db: Session = Depends(get_db)):
         "short_name": team.short_name,
         "logo_url": team.logo_url,
         "league": team.league.name if team.league else None,
+        "sport_id": team.league.sport_id if team.league else None,
         "record": {"wins": team.wins, "losses": team.losses, "ties": team.ties, "win_pct": team.win_pct},
         "division": team.division,
         "conference": team.conference,
         "recent_results": [_result_line(g) for g in recent_games],
     }
+
+
+@router.get("/team/{team_id}")
+def team_stats(team_id: int, db: Session = Depends(get_db)):
+    """Perfil real de un equipo: récord, posición y sus últimos partidos jugados."""
+    profile = _build_team_profile(team_id, db)
+    profile.pop("sport_id", None)  # detalle interno, no se expone en el perfil individual
+    return profile
+
+
+@router.get("/teams/compare")
+def compare_teams(
+    id_a: int = Query(description="ID del primer equipo"),
+    id_b: int = Query(description="ID del segundo equipo"),
+    db: Session = Depends(get_db),
+):
+    """
+    Compara dos equipos lado a lado. NUNCA se permite comparar equipos de
+    deportes distintos (ej. un equipo de MLB contra uno de NBA) — se
+    valida explícitamente y se rechaza con 400 si no coinciden.
+    """
+    if id_a == id_b:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Elige dos equipos distintos.")
+
+    team_a = _build_team_profile(id_a, db)
+    team_b = _build_team_profile(id_b, db)
+
+    if team_a["sport_id"] is None or team_b["sport_id"] is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pudo determinar el deporte de uno de los equipos.",
+        )
+    if team_a["sport_id"] != team_b["sport_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pueden comparar equipos de deportes distintos.",
+        )
+
+    team_a.pop("sport_id", None)
+    team_b.pop("sport_id", None)
+    return {"team_a": team_a, "team_b": team_b}
 
 
 async def _build_player_profile(player_id: int, db: Session) -> dict:

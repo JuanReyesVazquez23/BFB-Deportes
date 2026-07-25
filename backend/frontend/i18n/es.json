@@ -80,7 +80,8 @@
     "saves": "Salvamentos",
     "inningsPitched": "Innings lanzados",
     "noStatsYet": "Aún no hay estadísticas de temporada disponibles para este jugador.",
-    "compareToggle": "Comparar 2 jugadores",
+    "comparePlayersToggle": "Comparar 2 jugadores",
+    "compareTeamsToggle": "Comparar 2 equipos",
     "compareFirstPicked": "Elegiste",
     "compareNowPickSecond": "Ahora busca al segundo jugador."
   },

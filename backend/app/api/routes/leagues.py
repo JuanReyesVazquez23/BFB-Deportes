@@ -13,12 +13,20 @@ def list_sports(db: Session = Depends(get_db)):
     return db.query(Sport).all()
 
 
+DISABLED_LEAGUE_KEYS = {"wnba", "ncaab", "world_cup"}
+
+
 @router.get("/sports/{sport_key}/leagues", response_model=list[LeagueOut])
 def list_leagues(sport_key: str, db: Session = Depends(get_db)):
     sport = db.query(Sport).filter(Sport.key == sport_key).first()
     if not sport:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deporte no encontrado.")
-    return db.query(League).filter(League.sport_id == sport.id).order_by(League.is_primary.desc()).all()
+    return (
+        db.query(League)
+        .filter(League.sport_id == sport.id, League.key.notin_(DISABLED_LEAGUE_KEYS))
+        .order_by(League.is_primary.desc())
+        .all()
+    )
 
 
 @router.get("/leagues/{league_key}/teams", response_model=list[TeamOut])

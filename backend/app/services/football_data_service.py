@@ -73,15 +73,21 @@ async def get_matches(league_key: str, date_from: date | None = None, date_to: d
         return resp.json()
 
 
-async def get_standings(league_key: str) -> dict:
+async def get_standings(league_key: str, season: int | None = None) -> dict:
     """
     Tabla de posiciones. No disponible (404) para competencias tipo copa/
     torneo con grupos (ej. el Mundial) — quien llama a esto debe evitar
     pedirlo para esas competencias, o manejar el error.
+
+    Se especifica "season" explícitamente: sin esto, la API puede devolver
+    por defecto la última temporada con datos (ej. la anterior, ya
+    finalizada) en vez de la temporada actual/nueva que todavía no arrancó,
+    mostrando números reales cuando en realidad nadie ha jugado todavía.
     """
     code = COMPETITION_CODES[league_key]
     url = f"{settings.FOOTBALL_DATA_API_BASE}/competitions/{code}/standings"
+    params = {"season": season} if season else {}
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        resp = await client.get(url, headers=_headers())
+        resp = await client.get(url, params=params, headers=_headers())
         resp.raise_for_status()
         return resp.json()

@@ -6,7 +6,7 @@
 let statsDebounceTimer = null;
 let statsSelectedType = 'team';
 let compareMode = false;
-let firstComparedPlayer = null; // {id, label} del primer jugador elegido en modo comparación
+let firstComparedEntity = null; // {id, label} del primer elemento elegido en modo comparación
 
 function outcomeLabel(outcome) {
   return outcome === 'W' ? t('stats.win') : t('stats.loss');
@@ -70,6 +70,33 @@ function renderPlayerCompareCard(data) {
           : ''
       }
       ${!hasBatting && !hasPitching ? `<p class="empty-state">${t('stats.noStatsYet')}</p>` : ''}
+    </div>`;
+}
+
+function renderTeamCompareCard(data) {
+  const a = data.team_a;
+  const b = data.team_b;
+
+  return `
+    <div class="stats-card">
+      <div class="compare-header-row">
+        <div class="compare-header-side">
+          ${a.logo_url ? `<img src="${a.logo_url}" alt="">` : ''}
+          <h3>${a.name}</h3>
+          <span class="stats-subtitle">${a.league || ''}</span>
+        </div>
+        <span class="compare-vs">VS</span>
+        <div class="compare-header-side">
+          ${b.logo_url ? `<img src="${b.logo_url}" alt="">` : ''}
+          <h3>${b.name}</h3>
+          <span class="stats-subtitle">${b.league || ''}</span>
+        </div>
+      </div>
+      <table class="compare-table">
+        ${compareRow('stats.wins', a.record.wins, b.record.wins)}
+        ${compareRow('stats.losses', a.record.losses, b.record.losses)}
+        ${compareRow('stats.winPct', `${(a.record.win_pct * 100).toFixed(1)}%`, `${(b.record.win_pct * 100).toFixed(1)}%`)}
+      </table>
     </div>`;
 }
 
@@ -196,9 +223,9 @@ async function selectStatsResult(type, id, label) {
   const statusEl = document.getElementById('stats-compare-status');
   const input = document.getElementById('stats-query');
 
-  if (compareMode && type === 'player') {
-    if (!firstComparedPlayer) {
-      firstComparedPlayer = { id, label };
+  if (compareMode) {
+    if (!firstComparedEntity) {
+      firstComparedEntity = { id, label };
       input.value = '';
       statusEl.classList.remove('hidden');
       statusEl.textContent = `${t('stats.compareFirstPicked')}: ${label}. ${t('stats.compareNowPickSecond')}`;
@@ -207,12 +234,13 @@ async function selectStatsResult(type, id, label) {
 
     resultEl.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
     try {
-      const data = await api.get(`/stats/players/compare?id_a=${firstComparedPlayer.id}&id_b=${id}`);
-      resultEl.innerHTML = renderPlayerCompareCard(data);
+      const endpoint = type === 'team' ? '/stats/teams/compare' : '/stats/players/compare';
+      const data = await api.get(`${endpoint}?id_a=${firstComparedEntity.id}&id_b=${id}`);
+      resultEl.innerHTML = type === 'team' ? renderTeamCompareCard(data) : renderPlayerCompareCard(data);
     } catch (err) {
       resultEl.innerHTML = `<p class="empty-state">${err.message}</p>`;
     }
-    firstComparedPlayer = null;
+    firstComparedEntity = null;
     statusEl.classList.add('hidden');
     return;
   }
@@ -246,19 +274,20 @@ function initStatsSearch() {
     document.getElementById('stats-suggestions').classList.add('hidden');
     input.placeholder = t(statsSelectedType === 'team' ? 'stats.placeholderTeam' : 'stats.placeholderPlayer');
 
-    // Comparar solo aplica a jugadores (NO se pueden cruzar deportes ni tipos).
-    compareToggleRow.classList.toggle('hidden', statsSelectedType !== 'player');
-    if (statsSelectedType !== 'player') {
-      compareToggle.checked = false;
-      compareMode = false;
-      firstComparedPlayer = null;
-      statusEl.classList.add('hidden');
-    }
+    // El toggle aplica a ambos tipos, pero nunca se cruzan entre sí
+    // (comparar siempre es equipo-vs-equipo o jugador-vs-jugador).
+    document.getElementById('stats-compare-toggle-label').textContent = t(
+      statsSelectedType === 'team' ? 'stats.compareTeamsToggle' : 'stats.comparePlayersToggle'
+    );
+    compareToggle.checked = false;
+    compareMode = false;
+    firstComparedEntity = null;
+    statusEl.classList.add('hidden');
   });
 
   compareToggle.addEventListener('change', (e) => {
     compareMode = e.target.checked;
-    firstComparedPlayer = null;
+    firstComparedEntity = null;
     statusEl.classList.add('hidden');
     document.getElementById('stats-result').innerHTML = '';
   });

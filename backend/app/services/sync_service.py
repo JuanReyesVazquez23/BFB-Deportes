@@ -77,8 +77,7 @@ def ensure_base_catalog(db: Session) -> None:
     _get_or_create_league(db, baseball, "mlb", "MLB", provider="mlb_stats_api", is_primary=True)
 
     _get_or_create_league(db, basketball, "nba", "NBA", provider="balldontlie", is_primary=True)
-    _get_or_create_league(db, basketball, "wnba", "WNBA", provider="balldontlie")
-    _get_or_create_league(db, basketball, "ncaab", "NCAA Basketball", provider="balldontlie")
+    # Basketball: solo NBA (WNBA/NCAAB desactivadas por pedido explícito).
 
     # El Mundial vive aquí, como una liga más de fútbol (igual que en
     # SofaScore/OneFootball), no como una pestaña de deporte aparte.
@@ -90,7 +89,7 @@ def ensure_base_catalog(db: Session) -> None:
     _get_or_create_league(db, football, "bundesliga", "Bundesliga", provider="football_data_org")
     _get_or_create_league(db, football, "ligue1", "Ligue 1", provider="football_data_org")
     _get_or_create_league(db, football, "champions_league", "Champions League", provider="football_data_org")
-    _get_or_create_league(db, football, "world_cup", "Mundial 2026", provider="football_data_org")
+    # Mundial 2026 desactivado por pedido explícito.
 
 
 async def sync_mlb_teams_and_standings() -> None:
@@ -578,7 +577,13 @@ async def sync_football_data_league(league_key: str) -> None:
             # para alguna, se registra el error sin tumbar el resto del sync.
             await asyncio.sleep(FOOTBALL_DATA_CALL_SPACING_SECONDS)
             try:
-                standings_data = await football_data_service.get_standings(league_key)
+                # Convención europea: la temporada se nombra por su año de
+                # inicio (ej. "2026" = temporada 2026-27, agosto a mayo).
+                # Antes de agosto, se sigue en la temporada que empezó el año
+                # anterior; de agosto en adelante, en la que empieza este año.
+                now = datetime.now(timezone.utc)
+                current_season = now.year if now.month >= 7 else now.year - 1
+                standings_data = await football_data_service.get_standings(league_key, season=current_season)
                 tables = standings_data.get("standings", [])
                 total_table = next((t for t in tables if t.get("type") == "TOTAL"), tables[0] if tables else None)
                 for entry in (total_table or {}).get("table", []):
@@ -862,7 +867,7 @@ async def run_full_sync() -> None:
     await sync_mlb_rosters()
 
     if settings.BALLDONTLIE_API_KEY:
-        for league_key in ("nba", "wnba", "ncaab"):
+        for league_key in ("nba",):
             try:
                 await sync_basketball_league(league_key)
             except Exception:
@@ -872,7 +877,7 @@ async def run_full_sync() -> None:
         logger.info("BALLDONTLIE_API_KEY no configurada: se omite la sincronización de basketball.")
 
     if settings.FOOTBALL_DATA_API_KEY:
-        for league_key in ("epl", "laliga", "seriea", "bundesliga", "ligue1", "champions_league", "world_cup"):
+        for league_key in ("epl", "laliga", "seriea", "bundesliga", "ligue1", "champions_league"):
             try:
                 await sync_football_data_league(league_key)
             except Exception:
