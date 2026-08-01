@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import SessionLocal
+from app.models.favorite import Favorite
 from app.models.prediction import Prediction
 from app.models.sport import Game, League, NewsArticle, Player, Sport, Team
 from app.models.user import User
@@ -219,30 +220,17 @@ def _process_mlb_schedule(db, league, schedule: dict) -> None:
                 .filter(Team.league_id == league.id, Team.external_id == str(away_info["id"]))
                 .first()
             )
-            # Si el equipo no existe (ej. "American League"/"National League" en
-            # el Juego de Estrellas, que no son franquicias reales), se crea un
-            # registro mínimo con el id y nombre que la propia MLB da en ese
-            # momento, en vez de descartar el partido completo. Los 30 equipos
-            # reales ya vienen completos desde sync_mlb_teams_and_standings;
-            # esto solo cubre casos especiales como este.
-            if not home_team:
-                home_team = Team(
-                    league_id=league.id,
-                    external_id=str(home_info["id"]),
-                    name=home_info.get("name", "TBD"),
-                    is_placeholder=True,
-                )
-                db.add(home_team)
-                db.flush()
-            if not away_team:
-                away_team = Team(
-                    league_id=league.id,
-                    external_id=str(away_info["id"]),
-                    name=away_info.get("name", "TBD"),
-                    is_placeholder=True,
-                )
-                db.add(away_team)
-                db.flush()
+            # Si alguno de los dos "equipos" no existe ya como franquicia real
+            # sincronizada (ej. "American League"/"National League" del Juego
+            # de Estrellas, o el Futures Game), el partido se omite por
+            # completo: no es temporada regular entre los 30 equipos reales y
+            # no debe aparecer en la página (pedido explícito). Antes se
+            # creaba un equipo "placeholder" para no perder el partido, pero
+            # eso es justo lo que hacía que el Juego de Estrellas apareciera
+            # en la página. Los 30 equipos reales siempre existen ya gracias
+            # a sync_mlb_teams_and_standings, que corre antes que esta función.
+            if not home_team or not away_team:
+                continue
 
             game = (
                 db.query(Game)
@@ -336,6 +324,58 @@ NBA_ESPN_LOGO_SLUG_OVERRIDES = {
 }
 
 
+def _prune_stale_teams(db: Session, league: League, valid_external_ids: set[str]) -> int:
+    """
+    Elimina de la BD equipos de esta liga que la API ya NO devuelve (ej.
+    quedaron guardados por una versión anterior del código que traía datos
+    equivocados). Se borran también sus partidos, jugadores, predicciones y
+    favoritos asociados en el orden correcto, para no violar las llaves
+    foráneas. Devuelve cuántos equipos se eliminaron.
+
+    Medida de seguridad: si la API no devolvió ningún equipo válido (ej. un
+    fallo temporal), no se borra nada — así un error pasajero de la API
+    nunca puede vaciar la tabla completa por error.
+    """
+    if not valid_external_ids:
+        return 0
+
+    stale_teams = (
+        db.query(Team)
+        .filter(Team.league_id == league.id, Team.external_id.notin_(valid_external_ids))
+        .all()
+    )
+    if not stale_teams:
+        return 0
+
+    stale_team_ids = [t.id for t in stale_teams]
+
+    # Favoritos que apuntan directo a alguno de estos equipos.
+    db.query(Favorite).filter(Favorite.team_id.in_(stale_team_ids)).delete(synchronize_session=False)
+
+    # Jugadores de estos equipos (y los favoritos que apunten a esos jugadores).
+    stale_player_ids = [p.id for p in db.query(Player).filter(Player.team_id.in_(stale_team_ids)).all()]
+    if stale_player_ids:
+        db.query(Favorite).filter(Favorite.player_id.in_(stale_player_ids)).delete(synchronize_session=False)
+        db.query(Player).filter(Player.id.in_(stale_player_ids)).delete(synchronize_session=False)
+
+    # Partidos de estos equipos: se borran uno por uno (no en bloque) para
+    # que SQLAlchemy dispare el cascade Game -> Prediction ya definido en el
+    # modelo (un borrado en bloque no dispara cascades del ORM).
+    stale_games = (
+        db.query(Game)
+        .filter((Game.home_team_id.in_(stale_team_ids)) | (Game.away_team_id.in_(stale_team_ids)))
+        .all()
+    )
+    for game in stale_games:
+        db.delete(game)
+    db.flush()
+
+    for team in stale_teams:
+        db.delete(team)
+
+    return len(stale_teams)
+
+
 async def sync_basketball_league(league_key: str) -> None:
     """
     Sincroniza equipos y partidos de hoy de una liga de basketball vía
@@ -384,6 +424,16 @@ async def sync_basketball_league(league_key: str) -> None:
                 if league_key == "nba" and team.abbreviation:
                     slug = NBA_ESPN_LOGO_SLUG_OVERRIDES.get(team.abbreviation, team.abbreviation.lower())
                     team.logo_url = f"https://a.espncdn.com/i/teamlogos/nba/500/{slug}.png"
+
+            valid_external_ids = {str(t["id"]) for t in teams_data.get("data", [])}
+            removed = _prune_stale_teams(db, league, valid_external_ids)
+            if removed:
+                logger.info(
+                    "Se eliminaron %d equipo(s) de '%s' que ya no reporta la API (datos obsoletos).",
+                    removed,
+                    league_key,
+                )
+
             db.commit()
         except Exception:
             db.rollback()

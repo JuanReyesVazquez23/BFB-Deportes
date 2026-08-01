@@ -1,10 +1,10 @@
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, aliased, joinedload
 
 from app.api.deps import get_db
-from app.models.sport import Game, League
+from app.models.sport import Game, League, Team
 from app.schemas.sport import GameDetailOut, GameOut
 from app.services import mlb_service, translation_service
 
@@ -22,10 +22,20 @@ def list_games(
     if not league:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Liga no encontrada.")
 
+    # Se excluyen partidos donde el equipo local o visitante es un
+    # "placeholder" (ej. "American League"/"National League" del Juego de
+    # Estrellas de MLB, que no son franquicias reales): mismo criterio que
+    # ya se aplica en posiciones y en la búsqueda de estadísticas.
+    HomeTeam = aliased(Team)
+    AwayTeam = aliased(Team)
     query = (
         db.query(Game)
         .options(joinedload(Game.home_team), joinedload(Game.away_team))
+        .join(HomeTeam, Game.home_team_id == HomeTeam.id)
+        .join(AwayTeam, Game.away_team_id == AwayTeam.id)
         .filter(Game.league_id == league.id)
+        .filter(HomeTeam.is_placeholder.is_(False))
+        .filter(AwayTeam.is_placeholder.is_(False))
     )
 
     if game_date:
@@ -57,10 +67,16 @@ def get_game_detail(game_id: int, db: Session = Depends(get_db)):
     específica del deporte, por ejemplo en béisbol: pitcher ganador,
     perdedor, salvamento y líderes ofensivos del juego.
     """
+    HomeTeam = aliased(Team)
+    AwayTeam = aliased(Team)
     game = (
         db.query(Game)
         .options(joinedload(Game.home_team), joinedload(Game.away_team))
+        .join(HomeTeam, Game.home_team_id == HomeTeam.id)
+        .join(AwayTeam, Game.away_team_id == AwayTeam.id)
         .filter(Game.id == game_id)
+        .filter(HomeTeam.is_placeholder.is_(False))
+        .filter(AwayTeam.is_placeholder.is_(False))
         .first()
     )
     if not game:
