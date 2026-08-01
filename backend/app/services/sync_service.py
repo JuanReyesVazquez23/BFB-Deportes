@@ -109,6 +109,7 @@ async def sync_mlb_teams_and_standings() -> None:
         teams_data = await mlb_service.get_teams(CURRENT_MLB_SEASON)
         team_details_by_id = {str(t["id"]): t for t in teams_data.get("teams", [])}
 
+        valid_external_ids: set[str] = set()
         for record in standings_data.get("records", []):
             division_id = record.get("division", {}).get("id")
             division_name = mlb_service.MLB_DIVISION_NAMES.get(division_id)
@@ -116,6 +117,7 @@ async def sync_mlb_teams_and_standings() -> None:
             for team_record in record.get("teamRecords", []):
                 team_info = team_record["team"]
                 external_id = str(team_info["id"])
+                valid_external_ids.add(external_id)
                 details = team_details_by_id.get(external_id, {})
 
                 team = (
@@ -141,7 +143,21 @@ async def sync_mlb_teams_and_standings() -> None:
                 team.losses = losses
                 team.win_pct = round(wins / total, 3) if total else 0.0
                 team.division = division_name
+                team.is_placeholder = False
                 team.standings_updated_at = datetime.now(timezone.utc)
+
+        # Limpieza: cualquier equipo de MLB en la BD que NO sea una de las 30
+        # franquicias reales de esta tabla de posiciones se elimina (ej. los
+        # "equipos" American League / National League del Juego de Estrellas
+        # que hayan quedado guardados de una sincronización anterior a este
+        # arreglo — is_placeholder ya no alcanza por sí solo si esos registros
+        # se crearon antes de que existiera esa bandera).
+        removed = _prune_stale_teams(db, league, valid_external_ids)
+        if removed:
+            logger.info(
+                "Se eliminaron %d equipo(s) de 'mlb' que no son franquicias reales (ej. Juego de Estrellas).",
+                removed,
+            )
 
         db.commit()
         logger.info("Posiciones de MLB sincronizadas correctamente.")
@@ -398,6 +414,16 @@ async def sync_basketball_league(league_key: str) -> None:
         try:
             teams_data = await balldontlie_service.get_teams(league_key)
             for team_info in teams_data.get("data", []):
+                # balldontlie devuelve TODO el historial de franquicias de la
+                # NBA (ej. "Chicago Stags", "Washington Capitols" de los años
+                # 40), no solo los 30 equipos vigentes. No hay un nombre
+                # explícito que buscar para descartarlas: la propia API marca
+                # a los equipos activos con una conferencia ("East"/"West")
+                # asignada, y a los históricos no — ese es el criterio que se
+                # usa aquí para quedarnos solo con los equipos vigentes.
+                if league_key == "nba" and not team_info.get("conference"):
+                    continue
+
                 external_id = str(team_info["id"])
                 team = (
                     db.query(Team)
@@ -425,11 +451,15 @@ async def sync_basketball_league(league_key: str) -> None:
                     slug = NBA_ESPN_LOGO_SLUG_OVERRIDES.get(team.abbreviation, team.abbreviation.lower())
                     team.logo_url = f"https://a.espncdn.com/i/teamlogos/nba/500/{slug}.png"
 
-            valid_external_ids = {str(t["id"]) for t in teams_data.get("data", [])}
+            valid_external_ids = {
+                str(t["id"])
+                for t in teams_data.get("data", [])
+                if league_key != "nba" or t.get("conference")
+            }
             removed = _prune_stale_teams(db, league, valid_external_ids)
             if removed:
                 logger.info(
-                    "Se eliminaron %d equipo(s) de '%s' que ya no reporta la API (datos obsoletos).",
+                    "Se eliminaron %d equipo(s) de '%s' que ya no reporta la API o son franquicias históricas.",
                     removed,
                     league_key,
                 )
