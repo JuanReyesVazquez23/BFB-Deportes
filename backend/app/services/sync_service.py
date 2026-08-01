@@ -536,6 +536,79 @@ async def sync_basketball_league(league_key: str) -> None:
         db.close()
 
 
+# Equipos por ciclo al sincronizar rosters de NBA (5 min entre ciclos). Se
+# limita para no acumular demasiadas llamadas seguidas en una sola corrida
+# y respetar el límite gratuito de balldontlie (5 peticiones/minuto).
+NBA_ROSTER_SYNC_BATCH_SIZE = 6
+
+
+async def sync_basketball_rosters(league_key: str = "nba") -> None:
+    """
+    Sincroniza el roster (nombre, posición, número) de cada equipo de la
+    liga, para que el buscador de estadísticas encuentre jugadores reales
+    de NBA por nombre.
+
+    Solo se consulta un equipo si todavía no tiene ningún jugador guardado
+    (no hay una forma barata de detectar cambios de plantilla sin gastar
+    otra llamada a la API); como máximo NBA_ROSTER_SYNC_BATCH_SIZE equipos
+    por ciclo, así el primer respaldo completo se reparte en varios ciclos
+    de 5 minutos en vez de tardar 10+ minutos de un solo golpe.
+
+    IMPORTANTE (limitación real de la API, no del código): el plan
+    gratuito de balldontlie incluye jugadores (nombre, posición, equipo)
+    pero NO estadísticas (puntos, rebotes, asistencias) — eso requiere un
+    plan de pago (ALL-STAR o GOAT, ver balldontlie.io/pricing). Por eso el
+    perfil de un jugador de NBA se muestra sin números, igual que ya pasa
+    cuando a un jugador de MLB no se le encuentran estadísticas.
+    """
+    db = SessionLocal()
+    try:
+        league = db.query(League).filter(League.key == league_key).first()
+        if not league:
+            return
+
+        teams_needing_sync = (
+            db.query(Team)
+            .filter(Team.league_id == league.id)
+            .filter(~Team.players.any())
+            .limit(NBA_ROSTER_SYNC_BATCH_SIZE)
+            .all()
+        )
+        for team in teams_needing_sync:
+            try:
+                players_data = await balldontlie_service.get_players(league_key, int(team.external_id))
+            except Exception:
+                logger.exception("No se pudo obtener el roster de '%s' (NBA).", team.name)
+                await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
+                continue
+
+            for player_info in players_data.get("data", []):
+                external_id = str(player_info.get("id", ""))
+                full_name = f"{player_info.get('first_name', '')} {player_info.get('last_name', '')}".strip()
+                if not external_id or not full_name:
+                    continue
+
+                player = (
+                    db.query(Player)
+                    .filter(Player.team_id == team.id, Player.external_id == external_id)
+                    .first()
+                )
+                if not player:
+                    player = Player(team_id=team.id, external_id=external_id, full_name=full_name)
+                    db.add(player)
+                player.full_name = full_name
+                player.position = player_info.get("position")
+                player.jersey_number = player_info.get("jersey_number")
+
+            db.commit()
+            await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
+
+        if teams_needing_sync:
+            logger.info("Roster de NBA sincronizado (%d equipo(s)).", len(teams_needing_sync))
+    finally:
+        db.close()
+
+
 FOOTBALL_DATA_STATUS_MAP = {
     "FINISHED": "final",
     "IN_PLAY": "live",
@@ -656,13 +729,15 @@ async def sync_football_data_league(league_key: str) -> None:
             # si football-data.org devuelve un formato distinto al esperado
             # para alguna, se registra el error sin tumbar el resto del sync.
             await asyncio.sleep(FOOTBALL_DATA_CALL_SPACING_SECONDS)
+
+            # Convención europea: la temporada se nombra por su año de
+            # inicio (ej. "2026" = temporada 2026-27, agosto a mayo).
+            # Antes de agosto, se sigue en la temporada que empezó el año
+            # anterior; de agosto en adelante, en la que empieza este año.
+            now = datetime.now(timezone.utc)
+            current_season = now.year if now.month >= 7 else now.year - 1
+
             try:
-                # Convención europea: la temporada se nombra por su año de
-                # inicio (ej. "2026" = temporada 2026-27, agosto a mayo).
-                # Antes de agosto, se sigue en la temporada que empezó el año
-                # anterior; de agosto en adelante, en la que empieza este año.
-                now = datetime.now(timezone.utc)
-                current_season = now.year if now.month >= 7 else now.year - 1
                 standings_data = await football_data_service.get_standings(league_key, season=current_season)
                 tables = standings_data.get("standings", [])
                 total_table = next((t for t in tables if t.get("type") == "TOTAL"), tables[0] if tables else None)
@@ -687,6 +762,54 @@ async def sync_football_data_league(league_key: str) -> None:
             except Exception:
                 db.rollback()
                 logger.warning("No se pudieron sincronizar posiciones de '%s' (football-data.org).", league_key)
+
+            # Goleadores: única fuente de estadísticas de jugador disponible
+            # sin plan de pago (ver docstring de get_scorers). Alimenta el
+            # buscador de jugadores de fútbol con nombres reales y goles/
+            # asistencias reales, aunque limitado a los goleadores
+            # destacados de cada competencia (no la plantilla completa).
+            await asyncio.sleep(FOOTBALL_DATA_CALL_SPACING_SECONDS)
+            try:
+                scorers_data = await football_data_service.get_scorers(league_key, season=current_season)
+                for entry in scorers_data.get("scorers", []):
+                    player_info = entry.get("player") or {}
+                    team_info = entry.get("team") or {}
+                    external_id = str(player_info.get("id", ""))
+                    team_external_id = str(team_info.get("id", ""))
+                    if not external_id or not team_external_id:
+                        continue
+
+                    team = (
+                        db.query(Team)
+                        .filter(Team.league_id == league.id, Team.external_id == team_external_id)
+                        .first()
+                    )
+                    if not team:
+                        continue  # el equipo se sincroniza en el próximo ciclo; se toma entonces
+
+                    player = (
+                        db.query(Player)
+                        .filter(Player.team_id == team.id, Player.external_id == external_id)
+                        .first()
+                    )
+                    if not player:
+                        player = Player(
+                            team_id=team.id,
+                            external_id=external_id,
+                            full_name=player_info.get("name", ""),
+                        )
+                        db.add(player)
+                    player.full_name = player_info.get("name") or player.full_name
+                    player.position = player_info.get("position")
+                    shirt_number = player_info.get("shirtNumber")
+                    player.jersey_number = str(shirt_number) if shirt_number is not None else None
+                    player.goals = entry.get("goals")
+                    player.assists = entry.get("assists")
+                db.commit()
+                logger.info("Goleadores de '%s' sincronizados (football-data.org).", league_key)
+            except Exception:
+                db.rollback()
+                logger.warning("No se pudieron sincronizar goleadores de '%s' (football-data.org).", league_key)
     finally:
         db.close()
 
@@ -953,6 +1076,11 @@ async def run_full_sync() -> None:
             except Exception:
                 logger.exception("Fallo sincronizando la liga de basketball '%s'.", league_key)
             await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
+
+        try:
+            await sync_basketball_rosters("nba")
+        except Exception:
+            logger.exception("Fallo sincronizando el roster de NBA.")
     else:
         logger.info("BALLDONTLIE_API_KEY no configurada: se omite la sincronización de basketball.")
 

@@ -98,6 +98,12 @@ class Player(Base):
     position: Mapped[str | None] = mapped_column(String(30), nullable=True)
     jersey_number: Mapped[str | None] = mapped_column(String(5), nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Solo se llenan para jugadores de fútbol (vía el listado de goleadores
+    # de football-data.org). MLB y NBA no guardan estadísticas de jugador
+    # en esta tabla: MLB se consulta en vivo, y NBA no tiene una fuente
+    # gratuita de estadísticas todavía (ver balldontlie_service.py).
+    goals: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    assists: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (UniqueConstraint("team_id", "external_id", name="uq_player_team_external"),)
 

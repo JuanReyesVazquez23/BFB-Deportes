@@ -28,8 +28,11 @@ function renderPlayerCompareCard(data) {
   const bb = b.batting_stats || {};
   const pa = a.pitching_stats || {};
   const pb = b.pitching_stats || {};
+  const sa = a.soccer_stats || {};
+  const sb = b.soccer_stats || {};
   const hasBatting = a.batting_stats || b.batting_stats;
   const hasPitching = a.pitching_stats || b.pitching_stats;
+  const hasSoccer = a.soccer_stats || b.soccer_stats;
 
   return `
     <div class="stats-card">
@@ -69,7 +72,16 @@ function renderPlayerCompareCard(data) {
         </table>`
           : ''
       }
-      ${!hasBatting && !hasPitching ? `<p class="empty-state">${t('stats.noStatsYet')}</p>` : ''}
+      ${
+        hasSoccer
+          ? `<h4 class="stats-section-label">${t('stats.soccerStats')}</h4>
+        <table class="compare-table">
+          ${compareRow('stats.goals', sa.goals ?? 0, sb.goals ?? 0)}
+          ${compareRow('stats.assists', sa.assists ?? 0, sb.assists ?? 0)}
+        </table>`
+          : ''
+      }
+      ${!hasBatting && !hasPitching && !hasSoccer ? `<p class="empty-state">${t('stats.noStatsYet')}</p>` : ''}
     </div>`;
 }
 
@@ -164,8 +176,18 @@ function renderPitchingStatsBlock(stats) {
     </div>`;
 }
 
+function renderSoccerStatsBlock(stats) {
+  if (!stats) return '';
+  return `
+    <h4 class="stats-section-label">${t('stats.soccerStats')}</h4>
+    <div class="stats-record-row stats-record-wrap">
+      <div><strong>${stats.goals ?? 0}</strong><span>${t('stats.goals')}</span></div>
+      <div><strong>${stats.assists ?? 0}</strong><span>${t('stats.assists')}</span></div>
+    </div>`;
+}
+
 function renderPlayerCard(player) {
-  const hasStats = player.batting_stats || player.pitching_stats;
+  const hasStats = player.batting_stats || player.pitching_stats || player.soccer_stats;
   return `
     <div class="stats-card">
       <div class="stats-card-header">
@@ -180,6 +202,7 @@ function renderPlayerCard(player) {
       </div>
       ${renderBattingStatsBlock(player.batting_stats)}
       ${renderPitchingStatsBlock(player.pitching_stats)}
+      ${renderSoccerStatsBlock(player.soccer_stats)}
       ${!hasStats ? `<p class="empty-state">${t('stats.noStatsYet')}</p>` : ''}
     </div>`;
 }
@@ -252,6 +275,22 @@ async function selectStatsResult(type, id, label) {
   } catch (err) {
     resultEl.innerHTML = `<p class="empty-state">${t('common.error')}</p>`;
   }
+}
+
+function resetStatsSearch() {
+  const input = document.getElementById('stats-query');
+  const suggestionsBox = document.getElementById('stats-suggestions');
+  const resultEl = document.getElementById('stats-result');
+  const statusEl = document.getElementById('stats-compare-status');
+  const compareToggle = document.getElementById('stats-compare-toggle');
+
+  if (input) input.value = '';
+  if (suggestionsBox) suggestionsBox.classList.add('hidden');
+  if (resultEl) resultEl.innerHTML = '';
+  if (statusEl) statusEl.classList.add('hidden');
+  if (compareToggle) compareToggle.checked = false;
+  compareMode = false;
+  firstComparedEntity = null;
 }
 
 function initStatsSearch() {

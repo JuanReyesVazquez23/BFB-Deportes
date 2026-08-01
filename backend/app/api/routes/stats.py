@@ -174,6 +174,7 @@ async def _build_player_profile(player_id: int, db: Session) -> dict:
 
     batting_stats = None
     pitching_stats = None
+    soccer_stats = None
 
     is_mlb_player = player.team and player.team.league and player.team.league.data_provider == "mlb_stats_api"
     if is_mlb_player:
@@ -184,6 +185,13 @@ async def _build_player_profile(player_id: int, db: Session) -> dict:
             pitching_stats = mlb_service.extract_pitching_stats(raw_stats["pitching"])
         except Exception:
             pass  # el perfil se muestra igual, solo sin números, en vez de fallar la petición completa
+
+    # Jugadores de fútbol: goles/asistencias vienen precargados desde el
+    # listado de goleadores (football-data.org), no se consultan en vivo.
+    # Es la única estadística de jugador disponible sin plan de pago, así
+    # que solo cubre a los goleadores destacados de cada competencia.
+    if player.goals is not None or player.assists is not None:
+        soccer_stats = {"goals": player.goals or 0, "assists": player.assists or 0}
 
     return {
         "id": player.id,
@@ -200,6 +208,7 @@ async def _build_player_profile(player_id: int, db: Session) -> dict:
         "sport_id": player.team.league.sport_id if player.team and player.team.league else None,
         "batting_stats": batting_stats,
         "pitching_stats": pitching_stats,
+        "soccer_stats": soccer_stats,
     }
 
 

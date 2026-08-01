@@ -537,6 +537,7 @@ async function loadSportSection(sportKey) {
   document.querySelectorAll('.sport-tab').forEach((tab) => {
     tab.classList.toggle('active', tab.dataset.sport === sportKey);
   });
+  resetStatsSearch();
 
   const isReady = SPORT_READY[sportKey];
 

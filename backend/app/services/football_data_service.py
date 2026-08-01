@@ -91,3 +91,27 @@ async def get_standings(league_key: str, season: int | None = None) -> dict:
         resp = await client.get(url, params=params, headers=_headers())
         resp.raise_for_status()
         return resp.json()
+
+
+async def get_scorers(league_key: str, season: int | None = None, limit: int = 20) -> dict:
+    """
+    Máximos goleadores de la competencia (goles, asistencias y penales),
+    confirmado como parte del nivel gratuito en la documentación oficial
+    (docs.football-data.org/general/v4/competition.html#_top_scorers).
+
+    Es la única fuente de estadísticas de jugador de fútbol disponible sin
+    pagar: el nivel gratuito NO incluye plantillas completas ni
+    estadísticas por partido (eso exige un plan de pago), así que el
+    buscador de jugadores de fútbol solo encuentra, por ahora, a los
+    goleadores destacados de cada competencia — no cualquier jugador del
+    plantel completo.
+    """
+    code = COMPETITION_CODES[league_key]
+    url = f"{settings.FOOTBALL_DATA_API_BASE}/competitions/{code}/scorers"
+    params: dict = {"limit": limit}
+    if season:
+        params["season"] = season
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        resp = await client.get(url, params=params, headers=_headers())
+        resp.raise_for_status()
+        return resp.json()
