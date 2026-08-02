@@ -1153,3 +1153,39 @@ button, input, select {
   .score-led { font-size: 20px; min-width: 60px; }
   .team-name { font-size: 12px; }
 }
+
+/* ---------- Panel de administración (borrar equipos incorrectos) ---------- */
+.btn-danger {
+  background: #ff4d4d;
+  color: var(--bfb-white);
+  border: none;
+}
+
+.btn-danger:hover {
+  background: #e63939;
+}
+
+#admin-panel {
+  margin: 16px auto;
+  max-width: 640px;
+  background: var(--bfb-black);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.admin-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.admin-team-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--bfb-border);
+  font-size: 13px;
+}

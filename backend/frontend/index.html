@@ -125,10 +125,24 @@
 
   </main>
 
-  <footer class="footer container">
+  <footer class="footer container" id="app-footer">
     <span><span class="bfb-word">BFB</span> Deportes — datos reales vía MLB Stats API, balldontlie.io y ESPN.</span>
     <span>© 2026</span>
   </footer>
+
+  <!-- Panel de administración: oculto por defecto. Se muestra con 5 taps en
+       el footer (sin popup). Solo es realmente útil si ya iniciaste sesión
+       con una cuenta admin — para cualquier otro usuario, el borrado
+       responde 403 sin importar que vea esta caja. -->
+  <div class="container hidden" id="admin-panel">
+    <h3>Panel de administración</h3>
+    <p class="stats-subtitle">Borra equipos incorrectos de la base de datos. Esta acción no se puede deshacer.</p>
+    <div class="admin-controls">
+      <select id="admin-league-select"></select>
+      <button class="btn btn-outline btn-small" id="admin-load-btn">Cargar equipos</button>
+    </div>
+    <div id="admin-team-list"></div>
+  </div>
 
   <!-- Modal de autenticación -->
   <div class="modal-backdrop hidden" id="auth-modal-backdrop">
@@ -166,5 +180,6 @@
   <script src="js/auth.js?v=20260719"></script>
   <script src="js/stats.js?v=20260801"></script>
   <script src="js/main.js?v=20260801"></script>
+  <script src="js/admin.js?v=20260801"></script>
 </body>
 </html>

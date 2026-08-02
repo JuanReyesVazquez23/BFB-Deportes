@@ -49,6 +49,7 @@ def register(payload: UserCreate, request: Request, response: Response, db: Sess
     db.refresh(user)
 
     _set_session_cookie(response, user.id)
+    user.is_admin = settings.is_admin_username(user.username)
     return user
 
 
@@ -71,6 +72,7 @@ def login(payload: UserLogin, request: Request, response: Response, db: Session 
         raise invalid_credentials
 
     _set_session_cookie(response, user.id)
+    user.is_admin = settings.is_admin_username(user.username)
     return user
 
 
@@ -82,6 +84,7 @@ def logout(response: Response):
 
 @router.get("/me", response_model=UserOut)
 def read_me(current_user: User = Depends(get_current_user)):
+    current_user.is_admin = settings.is_admin_username(current_user.username)
     return current_user
 
 

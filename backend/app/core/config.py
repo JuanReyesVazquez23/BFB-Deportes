@@ -83,6 +83,16 @@ class Settings(BaseSettings):
     LOGIN_RATE_LIMIT_ATTEMPTS: int = 8
     LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 300
 
+    # --- Panel de administración (borrar equipos incorrectos manualmente) ---
+    # Usernames (separados por coma, tal cual se registraron) con acceso al
+    # panel de admin. Vacío por defecto = nadie tiene acceso. Se define por
+    # variable de entorno para no dejar el usuario admin escrito en el código.
+    ADMIN_USERNAMES: str = ""
+
+    def is_admin_username(self, username: str) -> bool:
+        admins = {u.strip() for u in self.ADMIN_USERNAMES.split(",") if u.strip()}
+        return username in admins
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 

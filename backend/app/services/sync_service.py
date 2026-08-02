@@ -340,13 +340,50 @@ NBA_ESPN_LOGO_SLUG_OVERRIDES = {
 }
 
 
+def delete_teams_cascade(db: Session, team_ids: list[int]) -> int:
+    """
+    Borra los equipos indicados junto con todo lo que depende de ellos, en
+    el orden correcto para no violar llaves foráneas: favoritos directos,
+    jugadores (y sus favoritos), partidos (uno por uno, para que dispare
+    el cascade Game -> Prediction ya definido en el modelo), y por último
+    los equipos. Devuelve cuántos equipos se eliminaron.
+
+    Se usa tanto en la limpieza automática de sincronización como en el
+    panel de administración para borrar equipos incorrectos a mano.
+    """
+    if not team_ids:
+        return 0
+
+    # Favoritos que apuntan directo a alguno de estos equipos.
+    db.query(Favorite).filter(Favorite.team_id.in_(team_ids)).delete(synchronize_session=False)
+
+    # Jugadores de estos equipos (y los favoritos que apunten a esos jugadores).
+    player_ids = [p.id for p in db.query(Player).filter(Player.team_id.in_(team_ids)).all()]
+    if player_ids:
+        db.query(Favorite).filter(Favorite.player_id.in_(player_ids)).delete(synchronize_session=False)
+        db.query(Player).filter(Player.id.in_(player_ids)).delete(synchronize_session=False)
+
+    # Partidos de estos equipos: se borran uno por uno (no en bloque) para
+    # que SQLAlchemy dispare el cascade Game -> Prediction ya definido en el
+    # modelo (un borrado en bloque no dispara cascades del ORM).
+    games = (
+        db.query(Game)
+        .filter((Game.home_team_id.in_(team_ids)) | (Game.away_team_id.in_(team_ids)))
+        .all()
+    )
+    for game in games:
+        db.delete(game)
+    db.flush()
+
+    deleted = db.query(Team).filter(Team.id.in_(team_ids)).delete(synchronize_session=False)
+    return deleted
+
+
 def _prune_stale_teams(db: Session, league: League, valid_external_ids: set[str]) -> int:
     """
     Elimina de la BD equipos de esta liga que la API ya NO devuelve (ej.
     quedaron guardados por una versión anterior del código que traía datos
-    equivocados). Se borran también sus partidos, jugadores, predicciones y
-    favoritos asociados en el orden correcto, para no violar las llaves
-    foráneas. Devuelve cuántos equipos se eliminaron.
+    equivocados). Devuelve cuántos equipos se eliminaron.
 
     Medida de seguridad: si la API no devolvió ningún equipo válido (ej. un
     fallo temporal), no se borra nada — así un error pasajero de la API
@@ -355,41 +392,13 @@ def _prune_stale_teams(db: Session, league: League, valid_external_ids: set[str]
     if not valid_external_ids:
         return 0
 
-    stale_teams = (
-        db.query(Team)
+    stale_team_ids = [
+        t.id
+        for t in db.query(Team)
         .filter(Team.league_id == league.id, Team.external_id.notin_(valid_external_ids))
         .all()
-    )
-    if not stale_teams:
-        return 0
-
-    stale_team_ids = [t.id for t in stale_teams]
-
-    # Favoritos que apuntan directo a alguno de estos equipos.
-    db.query(Favorite).filter(Favorite.team_id.in_(stale_team_ids)).delete(synchronize_session=False)
-
-    # Jugadores de estos equipos (y los favoritos que apunten a esos jugadores).
-    stale_player_ids = [p.id for p in db.query(Player).filter(Player.team_id.in_(stale_team_ids)).all()]
-    if stale_player_ids:
-        db.query(Favorite).filter(Favorite.player_id.in_(stale_player_ids)).delete(synchronize_session=False)
-        db.query(Player).filter(Player.id.in_(stale_player_ids)).delete(synchronize_session=False)
-
-    # Partidos de estos equipos: se borran uno por uno (no en bloque) para
-    # que SQLAlchemy dispare el cascade Game -> Prediction ya definido en el
-    # modelo (un borrado en bloque no dispara cascades del ORM).
-    stale_games = (
-        db.query(Game)
-        .filter((Game.home_team_id.in_(stale_team_ids)) | (Game.away_team_id.in_(stale_team_ids)))
-        .all()
-    )
-    for game in stale_games:
-        db.delete(game)
-    db.flush()
-
-    for team in stale_teams:
-        db.delete(team)
-
-    return len(stale_teams)
+    ]
+    return delete_teams_cascade(db, stale_team_ids)
 
 
 async def sync_basketball_league(league_key: str) -> None:

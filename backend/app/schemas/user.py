@@ -38,6 +38,7 @@ class UserOut(BaseModel):
     email: EmailStr
     bfb_points: int
     preferred_language: str
+    is_admin: bool = False
 
     class Config:
         from_attributes = True

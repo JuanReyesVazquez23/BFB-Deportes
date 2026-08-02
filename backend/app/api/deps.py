@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import Cookie, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
@@ -45,3 +46,15 @@ def get_current_user_optional(
     if user_id is None:
         return None
     return db.get(User, int(user_id))
+
+
+def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
+    """
+    Igual que get_current_user, pero además exige que el usuario esté en
+    ADMIN_USERNAMES (ver core/config.py). Se usa solo para el panel de
+    administración (borrar equipos incorrectos manualmente) — nunca para
+    rutas de uso normal de la app.
+    """
+    if not settings.is_admin_username(current_user.username):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No autorizado.")
+    return current_user
