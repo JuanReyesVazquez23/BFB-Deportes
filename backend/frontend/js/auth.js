@@ -14,13 +14,27 @@ function renderUserStatus() {
 
   if (window.currentUser) {
     statusEl.innerHTML = `
-      <span class="points-pill">${window.currentUser.bfb_points} ${t('auth.points')}</span>
-      <button class="btn btn-ghost btn-small" id="predictions-history-btn">Historial</button>
-      <span>${window.currentUser.username}</span>
-      <button class="btn btn-ghost btn-small" id="logout-btn" data-i18n="auth.logout">${t('auth.logout')}</button>
+      <div class="account-menu">
+        <button class="account-menu-toggle" id="account-menu-toggle">
+          <span class="points-pill">${window.currentUser.bfb_points} pts</span>
+          <span class="account-username">${window.currentUser.username}</span>
+          <span class="account-menu-caret">▾</span>
+        </button>
+        <div class="account-menu-dropdown hidden" id="account-menu-dropdown">
+          <button class="account-menu-item" id="predictions-history-btn">Mis predicciones</button>
+          <button class="account-menu-item" id="logout-btn">${t('auth.logout')}</button>
+        </div>
+      </div>
     `;
+    document.getElementById('account-menu-toggle').addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('account-menu-dropdown').classList.toggle('hidden');
+    });
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
-    document.getElementById('predictions-history-btn').addEventListener('click', openPredictionsModal);
+    document.getElementById('predictions-history-btn').addEventListener('click', () => {
+      document.getElementById('account-menu-dropdown').classList.add('hidden');
+      openPredictionsModal();
+    });
     checkForNewPredictionResults();
   } else {
     statusEl.innerHTML = `
@@ -31,6 +45,14 @@ function renderUserStatus() {
 
   document.dispatchEvent(new CustomEvent('bfb:user-changed'));
 }
+
+// Cierra el menú de cuenta si se toca fuera de él.
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('account-menu-dropdown');
+  if (menu && !menu.classList.contains('hidden') && !e.target.closest('.account-menu')) {
+    menu.classList.add('hidden');
+  }
+});
 
 async function refreshCurrentUser() {
   try {

@@ -201,24 +201,35 @@ async function renderPredictionRow(game) {
 
   const homePts = pointsFromProbability(homeProb);
   const awayPts = pointsFromProbability(awayProb);
+  const homeLoss = pointsLostFromProbability(homeProb);
+  const awayLoss = pointsLostFromProbability(awayProb);
 
   return `${barHtml}
     <div class="predict-row">
       <button class="predict-btn" data-game-id="${game.id}" data-team-id="${game.home_team.id}">
         ${game.home_team.name}
-        <span class="points-tag">+${homePts} ${t('auth.points')}</span>
+        <span class="points-tag points-tag-win">+${homePts}</span>
+        <span class="points-tag points-tag-loss">-${homeLoss} ${t('game.ifWrong')}</span>
       </button>
       <button class="predict-btn" data-game-id="${game.id}" data-team-id="${game.away_team.id}">
         ${game.away_team.name}
-        <span class="points-tag">+${awayPts} ${t('auth.points')}</span>
+        <span class="points-tag points-tag-win">+${awayPts}</span>
+        <span class="points-tag points-tag-loss">-${awayLoss} ${t('game.ifWrong')}</span>
       </button>
     </div>`;
 }
 
-// Debe reflejar exactamente la fórmula de app/services/probability_service.py
+// Debe reflejar exactamente points_for_prediction en app/services/probability_service.py
 function pointsFromProbability(p) {
   const MIN = 2, MAX = 20;
   const points = MAX - (MAX - MIN) * p;
+  return Math.round(Math.max(MIN, Math.min(MAX, points)));
+}
+
+// Debe reflejar exactamente points_lost_for_prediction en app/services/probability_service.py
+function pointsLostFromProbability(p) {
+  const MIN = 2, MAX = 20;
+  const points = MIN + (MAX - MIN) * p;
   return Math.round(Math.max(MIN, Math.min(MAX, points)));
 }
 

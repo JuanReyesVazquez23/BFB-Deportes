@@ -22,7 +22,11 @@ from app.models.prediction import Prediction
 from app.models.sport import ExcludedTeam, Game, League, NewsArticle, Player, Sport, Team
 from app.models.user import User
 from app.services import balldontlie_service, football_data_service, mlb_service, news_service, translation_service
-from app.services.probability_service import estimate_home_win_probability, points_for_prediction
+from app.services.probability_service import (
+    estimate_home_win_probability,
+    points_for_prediction,
+    points_lost_for_prediction,
+)
 
 logger = logging.getLogger("bfb.sync")
 
@@ -1116,8 +1120,10 @@ def resolve_finished_predictions() -> None:
                 prediction.points_awarded = points
                 user.bfb_points += points
             else:
+                penalty = points_lost_for_prediction(prediction.probability_at_pick)
                 prediction.status = "incorrect"
-                prediction.points_awarded = 0
+                prediction.points_awarded = -penalty
+                user.bfb_points = max(0, user.bfb_points - penalty)
 
             prediction.resolved_at = datetime.now(timezone.utc)
             prediction.seen = False  # hay un resultado nuevo: el frontend debe avisarle al usuario

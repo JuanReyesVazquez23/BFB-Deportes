@@ -10,7 +10,7 @@ from app.models.prediction import Prediction
 from app.models.sport import Game
 from app.models.user import User
 from app.schemas.prediction import PredictionCreate, PredictionOut
-from app.services.probability_service import points_for_prediction
+from app.services.probability_service import points_for_prediction, points_lost_for_prediction
 
 router = APIRouter(prefix="/predictions", tags=["predictions"])
 
@@ -160,4 +160,8 @@ def preview_potential_points(game_id: int, team_id: int, db: Session = Depends(g
 
     probability = game.home_win_probability if game.home_win_probability is not None else 0.5
     prob_of_team = probability if team_id == game.home_team_id else 1 - probability
-    return {"probability": round(prob_of_team, 3), "potential_points": points_for_prediction(prob_of_team)}
+    return {
+        "probability": round(prob_of_team, 3),
+        "potential_points": points_for_prediction(prob_of_team),
+        "potential_loss": points_lost_for_prediction(prob_of_team),
+    }

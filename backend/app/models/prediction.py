@@ -10,11 +10,12 @@ class Prediction(Base):
     """
     Predicción de un usuario sobre el ganador de un partido que aún no comienza.
 
-    IMPORTANTE (regla de negocio, no es apuesta de dinero real ni de puntos
-    en riesgo): el usuario NO arriesga puntos al predecir. Si acierta, gana
-    entre BET_MIN_POINTS y BET_MAX_POINTS puntos BFB, calculados según qué
-    tan probable era que ese equipo ganara (menos probable = más puntos).
-    Si falla, no pierde puntos.
+    Regla de negocio: el usuario NO arriesga puntos por adelantado al
+    predecir. Si acierta, gana entre BET_MIN_POINTS y BET_MAX_POINTS puntos
+    BFB (menos probable el ganador = más puntos). Si falla, PIERDE puntos
+    (ver probability_service.points_lost_for_prediction) — más probable era
+    que ganara el equipo elegido, más puntos se pierden al fallar. Los
+    puntos del usuario nunca bajan de 0.
     """
 
     __tablename__ = "predictions"

@@ -46,20 +46,27 @@ async function checkForNewPredictionResults() {
     if (p.status === 'correct') {
       showToast(`¡Ganaste! Acertaste ${p.predicted_team?.name || 'tu equipo'} en ${matchup} (+${p.points_awarded} BFB points)`, 'success');
     } else {
-      showToast(`Perdiste tu predicción de ${p.predicted_team?.name || ''} en ${matchup}`, 'error');
+      showToast(`Perdiste tu predicción de ${p.predicted_team?.name || ''} en ${matchup} (${p.points_awarded} BFB points)`, 'error');
     }
   });
 
   api.post('/predictions/me/mark-seen', { prediction_ids: unseen.map((p) => p.id) }).catch(() => {});
 }
 
-function renderPredictionRow(p) {
+function renderPredictionHistoryRow(p) {
   const matchup = formatMatchup(p);
   const game = p.game;
   const score = game && game.status === 'final' ? `${game.away_score} - ${game.home_score}` : '';
 
   const statusLabel = { pending: 'Pendiente', correct: 'Acertaste', incorrect: 'Fallaste' }[p.status] || p.status;
   const statusClass = { pending: '', correct: 'prediction-correct', incorrect: 'prediction-incorrect' }[p.status] || '';
+
+  let pointsTag = '';
+  if (p.status === 'correct') {
+    pointsTag = `<span class="points-pill">+${p.points_awarded}</span>`;
+  } else if (p.status === 'incorrect') {
+    pointsTag = `<span class="points-pill points-pill-loss">${p.points_awarded}</span>`;
+  }
 
   return `
     <div class="prediction-row ${statusClass}">
@@ -69,7 +76,7 @@ function renderPredictionRow(p) {
       </div>
       <div class="prediction-row-status">
         <span>${statusLabel}</span>
-        ${p.status === 'correct' ? `<span class="points-pill">+${p.points_awarded}</span>` : ''}
+        ${pointsTag}
       </div>
     </div>`;
 }
@@ -88,7 +95,7 @@ async function openPredictionsModal() {
       listEl.innerHTML = '<p class="empty-state">Todavía no has hecho ninguna predicción.</p>';
       return;
     }
-    listEl.innerHTML = predictions.map(renderPredictionRow).join('');
+    listEl.innerHTML = predictions.map(renderPredictionHistoryRow).join('');
   } catch (err) {
     listEl.innerHTML = `<p class="empty-state">${err.message}</p>`;
   }

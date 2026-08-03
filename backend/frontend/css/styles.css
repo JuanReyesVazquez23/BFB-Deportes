@@ -130,7 +130,9 @@ button, input, select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 40px;
+  min-height: 40px;
+  padding: 6px 0;
+  gap: 8px;
 }
 
 .lang-select {
@@ -140,12 +142,14 @@ button, input, select {
   border-radius: var(--radius);
   padding: 4px 8px;
   font-size: 12px;
+  flex-shrink: 0;
 }
 
 .user-status {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .points-pill {
@@ -154,9 +158,77 @@ button, input, select {
   color: var(--bfb-yellow);
   border: 1px solid var(--bfb-yellow-dim);
   border-radius: 999px;
-  padding: 3px 12px;
+  padding: 3px 10px;
   font-weight: 700;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---------- Menú de cuenta (puntos + usuario + historial + salir) ---------- */
+.account-menu {
+  position: relative;
+  min-width: 0;
+}
+
+.account-menu-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  background: transparent;
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  color: var(--bfb-white);
+  cursor: pointer;
+}
+
+.account-username {
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
+}
+
+.account-menu-caret {
+  color: var(--bfb-yellow-dim);
+  font-size: 10px;
+}
+
+.account-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--bfb-black);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  min-width: 170px;
+  overflow: hidden;
+  z-index: 60;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+.account-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--bfb-border);
+  color: var(--bfb-white);
+  padding: 10px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.account-menu-item:last-child {
+  border-bottom: none;
+}
+
+.account-menu-item:hover {
+  background: var(--bfb-surface);
 }
 
 /* ---------- Cabecera / marca ---------- */
@@ -705,9 +777,17 @@ button, input, select {
 
 .predict-btn .points-tag {
   display: block;
-  color: var(--bfb-yellow);
   font-family: var(--font-mono);
   margin-top: 3px;
+  font-size: 11px;
+}
+
+.points-tag-win {
+  color: var(--bfb-yellow);
+}
+
+.points-tag-loss {
+  color: #ff6b6b;
 }
 
 .predict-btn.chosen {
@@ -1253,4 +1333,9 @@ button, input, select {
 
 .prediction-incorrect .prediction-row-status {
   color: #ff4d4d;
+}
+
+.points-pill-loss {
+  color: #ff4d4d !important;
+  border-color: #ff4d4d !important;
 }

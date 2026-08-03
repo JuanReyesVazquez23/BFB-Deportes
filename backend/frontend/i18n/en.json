@@ -34,6 +34,7 @@
     "live": "Live",
     "final": "Final",
     "scheduled": "Scheduled",
+    "ifWrong": "if wrong",
     "details": "View game details",
     "winningPitcher": "Winning pitcher",
     "losingPitcher": "Losing pitcher",

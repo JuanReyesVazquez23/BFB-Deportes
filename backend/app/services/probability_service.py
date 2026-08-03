@@ -2,13 +2,16 @@
 Cálculo de probabilidad de victoria y de los puntos BFB otorgados por
 predicción acertada.
 
-Regla de negocio (definida en la especificación del proyecto):
+Regla de negocio (actualizada — antes no se perdían puntos al fallar):
 - Cada partido no iniciado muestra una barra de probabilidad de victoria.
 - Si el usuario predice correctamente, gana entre BET_MIN_POINTS y
-  BET_MAX_POINTS puntos BFB.
-- Entre más probable era que el equipo elegido ganara, MENOS puntos se
-  otorgan; entre menos probable era, MÁS puntos se otorgan.
-- No hay pérdida de puntos por fallar (no es una apuesta con riesgo real).
+  BET_MAX_POINTS puntos BFB. Entre más probable era que el equipo elegido
+  ganara, MENOS puntos se otorgan; entre menos probable era, MÁS puntos.
+- Si el usuario predice incorrectamente, PIERDE puntos: al revés que al
+  acertar, entre más probable era que el equipo elegido ganara, MÁS puntos
+  se pierden (una sorpresa grande sale más cara); entre menos probable era
+  (una apuesta arriesgada), MENOS puntos se pierden, ya que perder era lo
+  más esperable. Los puntos del usuario nunca bajan de 0.
 
 Fuente de la probabilidad:
 1) Si el proveedor de datos ofrece cuotas/odds reales (ej. balldontlie en
@@ -73,7 +76,8 @@ def implied_probability_from_odds(decimal_odds: float) -> float:
 
 def points_for_prediction(probability_of_chosen_team: float) -> int:
     """
-    Traduce la probabilidad del equipo elegido en puntos BFB otorgados.
+    Traduce la probabilidad del equipo elegido en puntos BFB otorgados si
+    la predicción fue correcta.
 
     probability = 0.95 (muy probable que gane) -> puntos cercanos al mínimo
     probability = 0.05 (muy improbable que gane) -> puntos cercanos al máximo
@@ -82,4 +86,24 @@ def points_for_prediction(probability_of_chosen_team: float) -> int:
     min_pts, max_pts = settings.BET_MIN_POINTS, settings.BET_MAX_POINTS
 
     points = max_pts - (max_pts - min_pts) * p
+    return round(max(min_pts, min(max_pts, points)))
+
+
+def points_lost_for_prediction(probability_of_chosen_team: float) -> int:
+    """
+    Puntos que se RESTAN cuando el equipo elegido termina perdiendo.
+
+    Al revés que al acertar (ver points_for_prediction): entre MÁS
+    probable era que el equipo elegido ganara, MÁS puntos se pierden si
+    termina perdiendo — fue una sorpresa grande, un fallo "más caro".
+    Entre MENOS probable era (una apuesta arriesgada a un equipo débil),
+    MENOS puntos se pierden, ya que perder era el resultado más esperable.
+
+    probability = 0.95 (muy probable que gane, y aun así pierde) -> pérdida cercana al máximo
+    probability = 0.05 (muy improbable que gane, y en efecto pierde) -> pérdida cercana al mínimo
+    """
+    p = max(0.0, min(1.0, probability_of_chosen_team))
+    min_pts, max_pts = settings.BET_MIN_POINTS, settings.BET_MAX_POINTS
+
+    points = min_pts + (max_pts - min_pts) * p
     return round(max(min_pts, min(max_pts, points)))
