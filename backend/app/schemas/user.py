@@ -24,6 +24,12 @@ class UserCreate(BaseModel):
     def validate_password(cls, v: str) -> str:
         if len(v) < 8:
             raise ValueError("La contraseña debe tener al menos 8 caracteres.")
+        if len(v.encode("utf-8")) > 72:
+            # Límite real de bcrypt (72 bytes, no caracteres — un emoji o una
+            # letra con acento puede pesar varios bytes). Sin este chequeo,
+            # bcrypt lanza un error interno feo y el registro responde 500
+            # en vez de un mensaje claro.
+            raise ValueError("La contraseña no puede tener más de 72 caracteres.")
         return v
 
 

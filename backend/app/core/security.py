@@ -20,10 +20,20 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(plain_password: str) -> str:
+    if len(plain_password.encode("utf-8")) > 72:
+        # No debería llegar hasta aquí (el esquema de registro ya lo valida),
+        # pero se deja como red de seguridad: mejor un error claro que el
+        # ValueError interno de bcrypt.
+        raise ValueError("La contraseña no puede tener más de 72 caracteres.")
     return pwd_context.hash(plain_password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    if len(plain_password.encode("utf-8")) > 72:
+        # Ninguna cuenta real pudo haberse registrado con una contraseña así
+        # de larga (ver hash_password), así que nunca puede ser correcta.
+        # Se devuelve False en vez de dejar que bcrypt truene con un 500.
+        return False
     return pwd_context.verify(plain_password, hashed_password)
 
 

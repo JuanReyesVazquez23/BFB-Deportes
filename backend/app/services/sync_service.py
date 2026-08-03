@@ -272,8 +272,10 @@ def _process_mlb_schedule(db, league, schedule: dict) -> None:
             game.venue = game_data.get("venue", {}).get("name")
 
             if game.status == "scheduled" and game.home_win_probability is None:
+                home_form = _recent_form_win_pct(db, home_team.id)
+                away_form = _recent_form_win_pct(db, away_team.id)
                 game.home_win_probability = estimate_home_win_probability(
-                    home_team.win_pct or 0.5, away_team.win_pct or 0.5
+                    home_team.win_pct or 0.5, away_team.win_pct or 0.5, home_form, away_form
                 )
 
             details = game.details or {}
@@ -338,6 +340,86 @@ NBA_ESPN_LOGO_SLUG_OVERRIDES = {
     "UTA": "utah",  # Utah Jazz
     "SAS": "sa",  # San Antonio Spurs
 }
+
+
+def _recent_form_win_pct(db: Session, team_id: int, num_games: int = 10) -> float | None:
+    """
+    % de victorias del equipo en sus últimos `num_games` partidos ya
+    jugados (los más recientes primero). Un empate cuenta como partido
+    jugado sin sumar victoria (así se ignoran en fútbol en vez de tratarlos
+    como derrota).
+
+    Devuelve None si el equipo todavía no tiene partidos jugados — para no
+    inventar una "racha" a partir de cero datos; quien llama a esto debe
+    entonces usar solo el récord de temporada.
+    """
+    recent_games = (
+        db.query(Game)
+        .filter(
+            (Game.home_team_id == team_id) | (Game.away_team_id == team_id),
+            Game.status == "final",
+        )
+        .order_by(Game.start_time.desc())
+        .limit(num_games)
+        .all()
+    )
+
+    wins = 0
+    played = 0
+    for g in recent_games:
+        if g.home_score is None or g.away_score is None:
+            continue
+        team_is_home = g.home_team_id == team_id
+        team_score = g.home_score if team_is_home else g.away_score
+        opp_score = g.away_score if team_is_home else g.home_score
+        played += 1
+        if team_score > opp_score:
+            wins += 1
+
+    return wins / played if played else None
+
+
+def _recompute_win_loss_from_games(db: Session, league: League) -> None:
+    """
+    Calcula wins/losses/win_pct de cada equipo de la liga a partir de sus
+    partidos ya sincronizados (status='final'), en vez de depender de un
+    endpoint de posiciones dedicado.
+
+    Se usa para NBA: el plan gratuito de balldontlie no incluye un
+    endpoint de standings, pero sí incluye los resultados de los partidos
+    (Games), así que el récord real se puede derivar de ahí en vez de
+    dejar wins/losses en 0 para todos los equipos (que es lo que pasaba
+    antes, y hacía que la probabilidad de victoria saliera casi idéntica
+    en cada partido de NBA).
+    """
+    teams = db.query(Team).filter(Team.league_id == league.id).all()
+    for team in teams:
+        games = (
+            db.query(Game)
+            .filter(
+                (Game.home_team_id == team.id) | (Game.away_team_id == team.id),
+                Game.status == "final",
+            )
+            .all()
+        )
+        wins = 0
+        losses = 0
+        for g in games:
+            if g.home_score is None or g.away_score is None:
+                continue
+            team_is_home = g.home_team_id == team.id
+            team_score = g.home_score if team_is_home else g.away_score
+            opp_score = g.away_score if team_is_home else g.home_score
+            if team_score > opp_score:
+                wins += 1
+            elif team_score < opp_score:
+                losses += 1
+
+        team.wins = wins
+        team.losses = losses
+        total = wins + losses
+        team.win_pct = round(wins / total, 3) if total else 0.0
+        team.standings_updated_at = datetime.now(timezone.utc)
 
 
 def delete_teams_cascade(db: Session, team_ids: list[int]) -> int:
@@ -408,10 +490,10 @@ async def sync_basketball_league(league_key: str) -> None:
     de su documentación; WNBA/NCAAB deberían compartir la misma forma de
     respuesta al ser productos de la misma familia).
 
-    Nota: no se sincronizan posiciones de temporada completa todavía (el
-    endpoint /standings de balldontlie no se pudo confirmar con la misma
-    certeza). Mientras tanto, la probabilidad de victoria usa 50/50 por
-    defecto para estos equipos, igual que si no hubiera historial.
+    Nota: balldontlie no ofrece un endpoint de posiciones en el plan
+    gratuito, así que el récord real (wins/losses/win_pct) se calcula a
+    partir de los partidos ya jugados (ver _recompute_win_loss_from_games),
+    no de un endpoint de standings dedicado.
     """
     db = SessionLocal()
     try:
@@ -531,10 +613,19 @@ async def sync_basketball_league(league_key: str) -> None:
                 game.away_score = game_data.get("visitor_team_score")
 
                 if game.status == "scheduled" and game.home_win_probability is None:
+                    home_form = _recent_form_win_pct(db, home_team.id)
+                    away_form = _recent_form_win_pct(db, away_team.id)
                     game.home_win_probability = estimate_home_win_probability(
-                        home_team.win_pct or 0.5, away_team.win_pct or 0.5
+                        home_team.win_pct or 0.5, away_team.win_pct or 0.5, home_form, away_form
                     )
                 game.last_synced_at = datetime.now(timezone.utc)
+
+            # Récord real (wins/losses/win_pct): no hay endpoint de
+            # standings gratuito para NBA, así que se deriva de los
+            # partidos ya sincronizados. Antes quedaba en 0-0 para todos
+            # los equipos, lo que hacía que la probabilidad de victoria
+            # saliera casi idéntica en cualquier partido.
+            _recompute_win_loss_from_games(db, league)
 
             db.commit()
             logger.info("Partidos de '%s' sincronizados.", league_key)
@@ -721,8 +812,10 @@ async def sync_football_data_league(league_key: str) -> None:
                     game.period_status = f"{minute}'" if minute else None
 
                 if game.status == "scheduled" and game.home_win_probability is None:
+                    home_form = _recent_form_win_pct(db, home_team.id)
+                    away_form = _recent_form_win_pct(db, away_team.id)
                     game.home_win_probability = estimate_home_win_probability(
-                        home_team.win_pct or 0.5, away_team.win_pct or 0.5
+                        home_team.win_pct or 0.5, away_team.win_pct or 0.5, home_form, away_form
                     )
                 game.last_synced_at = datetime.now(timezone.utc)
 
@@ -908,8 +1001,10 @@ async def sync_soccer_league(league_key: str) -> None:
                 game.venue = match_data.get("venue_name")
 
                 if game.status == "scheduled" and game.home_win_probability is None:
+                    home_form = _recent_form_win_pct(db, home_team.id)
+                    away_form = _recent_form_win_pct(db, away_team.id)
                     game.home_win_probability = estimate_home_win_probability(
-                        home_team.win_pct or 0.5, away_team.win_pct or 0.5
+                        home_team.win_pct or 0.5, away_team.win_pct or 0.5, home_form, away_form
                     )
                 game.last_synced_at = datetime.now(timezone.utc)
 

@@ -6,6 +6,13 @@ pydantic[email]==2.9.2
 pydantic-settings==2.5.2
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+# bcrypt>=5.0.0 rompe una auto-prueba interna de passlib 1.7.4
+# (ValueError: "password cannot be longer than 72 bytes", incluso con
+# contraseñas cortas — no es un problema de la contraseña, es un bug de
+# compatibilidad entre las dos librerías; passlib no se ha actualizado en
+# años). Se fija esta versión, confirmada compatible, para que pip no
+# instale una versión nueva rota al desplegar.
+bcrypt==4.3.0
 python-multipart==0.0.9
 httpx==0.27.2
 feedparser==6.0.11

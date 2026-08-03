@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -28,13 +29,31 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 async def _background_sync_loop() -> None:
-    """Refresca los datos deportivos periódicamente sin bloquear las peticiones HTTP."""
+    """Refresca los datos deportivos periódicamente."""
     while True:
         try:
             await run_full_sync()
         except Exception:  # noqa: BLE001 - un fallo de sync no debe tumbar el servidor
             logger.exception("Error durante la sincronización periódica.")
         await asyncio.sleep(BACKGROUND_SYNC_INTERVAL_SECONDS)
+
+
+def _run_background_sync_loop_in_thread() -> None:
+    """
+    Corre _background_sync_loop en su PROPIO hilo, con su PROPIO event loop,
+    separado del event loop principal que atiende las peticiones HTTP.
+
+    Por qué: sync_service.py usa sesiones SÍNCRONAS de SQLAlchemy (no la
+    versión async) para hablar con la base de datos. Si esa sincronización
+    corriera en el mismo event loop que usa Uvicorn para atender HTTP (como
+    estaba antes, con asyncio.create_task), cada consulta a la base de datos
+    bloquea TODO el servidor mientras dura — nadie puede registrarse, iniciar
+    sesión ni cargar ninguna página mientras el ciclo de sincronización está
+    corriendo (varios minutos, entre MLB + NBA + 6 ligas de fútbol). En un
+    hilo aparte, el servidor sigue respondiendo con normalidad sin importar
+    cuánto tarde la sincronización.
+    """
+    asyncio.run(_background_sync_loop())
 
 
 @asynccontextmanager
@@ -53,9 +72,10 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    sync_task = asyncio.create_task(_background_sync_loop())
+    # daemon=True: el hilo se cierra solo cuando el proceso termina, no hace
+    # falta (ni conviene) intentar cancelarlo a mano en el shutdown.
+    threading.Thread(target=_run_background_sync_loop_in_thread, daemon=True).start()
     yield
-    sync_task.cancel()
 
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)

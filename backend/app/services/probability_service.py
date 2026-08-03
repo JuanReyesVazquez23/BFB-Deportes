@@ -23,19 +23,42 @@ Fuente de la probabilidad:
 from app.core.config import settings
 
 HOME_ADVANTAGE = 0.035  # 3.5 puntos porcentuales de ventaja para el equipo local
+RECENT_FORM_WEIGHT = 0.35  # peso de los últimos partidos frente al récord de temporada (0.65)
 
 
-def estimate_home_win_probability(home_win_pct: float, away_win_pct: float) -> float:
+def estimate_home_win_probability(
+    home_win_pct: float,
+    away_win_pct: float,
+    home_recent_form: float | None = None,
+    away_recent_form: float | None = None,
+) -> float:
     """
-    Heurística simple: convierte la diferencia de % de victorias en una
-    probabilidad, aplicando ventaja de local. Devuelve un valor entre
-    0.05 y 0.95 (nunca 0% ni 100%, para evitar barras "imposibles").
+    Heurística: combina el % de victorias de la TEMPORADA con la forma
+    RECIENTE de cada equipo (últimos partidos jugados), y aplica ventaja de
+    localía. Devuelve un valor entre 0.05 y 0.95 (nunca 0% ni 100%, para
+    evitar barras "imposibles").
+
+    Por qué se agrega la forma reciente: dos equipos con récord de
+    temporada parecido pueden estar en momentos muy distintos (uno en
+    racha, otro de capa caída) — sin esto, todos los partidos entre
+    equipos de nivel similar salían casi 50/50 sin importar cómo estuvieran
+    jugando en ese momento. home_recent_form/away_recent_form son opcionales
+    (None si el equipo casi no tiene partidos jugados todavía) para no
+    fabricar una racha de la nada con muestras muy chicas.
     """
-    total = home_win_pct + away_win_pct
+    home_strength = home_win_pct
+    if home_recent_form is not None:
+        home_strength = (1 - RECENT_FORM_WEIGHT) * home_win_pct + RECENT_FORM_WEIGHT * home_recent_form
+
+    away_strength = away_win_pct
+    if away_recent_form is not None:
+        away_strength = (1 - RECENT_FORM_WEIGHT) * away_win_pct + RECENT_FORM_WEIGHT * away_recent_form
+
+    total = home_strength + away_strength
     if total <= 0:
         base = 0.5
     else:
-        base = home_win_pct / total
+        base = home_strength / total
 
     probability = base + HOME_ADVANTAGE
     return max(0.05, min(0.95, probability))
