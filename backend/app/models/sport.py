@@ -171,3 +171,29 @@ class NewsArticle(Base):
     fetched_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
+
+
+class ExcludedTeam(Base):
+    """
+    Equipos que un admin borró a mano desde el panel de administración.
+
+    Por qué existe: borrar un equipo con el panel de admin no bastaba,
+    porque la siguiente sincronización lo volvía a crear si la API externa
+    todavía lo reportaba (ej. balldontlie a veces marca como "vigente" algo
+    que en realidad no debería mostrarse). Esta tabla es la lista negra
+    definitiva: toda sincronización de equipos revisa aquí primero y se
+    salta cualquier external_id que aparezca, sin importar qué diga la API
+    sobre ese equipo. Es la única forma de que un borrado del panel de
+    admin se quede borrado para siempre.
+    """
+
+    __tablename__ = "excluded_teams"
+    __table_args__ = (UniqueConstraint("league_id", "external_id", name="uq_excluded_team_league_external"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    league_id: Mapped[int] = mapped_column(ForeignKey("leagues.id"), nullable=False)
+    external_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    team_name: Mapped[str | None] = mapped_column(String(150), nullable=True)  # solo de referencia, no se usa en lógica
+    excluded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )

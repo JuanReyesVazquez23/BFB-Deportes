@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_admin_user
 from app.core.database import get_db
-from app.models.sport import League, Team
+from app.models.sport import ExcludedTeam, League, Team
 from app.models.user import User
 from app.services.sync_service import delete_teams_cascade
 
@@ -58,10 +58,23 @@ def delete_team(
     db: Session = Depends(get_db),
     _admin: User = Depends(get_current_admin_user),
 ):
-    """Borra un equipo y todo lo que dependa de él (partidos, jugadores, favoritos)."""
+    """
+    Borra un equipo y todo lo que dependa de él (partidos, jugadores,
+    favoritos), y lo agrega a la lista de exclusión permanente
+    (ExcludedTeam) para que ninguna sincronización futura lo vuelva a
+    crear, sin importar qué diga la API externa sobre él.
+    """
     team = db.get(Team, team_id)
     if not team:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Equipo no encontrado.")
+
+    already_excluded = (
+        db.query(ExcludedTeam)
+        .filter(ExcludedTeam.league_id == team.league_id, ExcludedTeam.external_id == team.external_id)
+        .first()
+    )
+    if not already_excluded:
+        db.add(ExcludedTeam(league_id=team.league_id, external_id=team.external_id, team_name=team.name))
 
     delete_teams_cascade(db, [team_id])
     db.commit()

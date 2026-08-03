@@ -15,10 +15,13 @@ function renderUserStatus() {
   if (window.currentUser) {
     statusEl.innerHTML = `
       <span class="points-pill">${window.currentUser.bfb_points} ${t('auth.points')}</span>
+      <button class="btn btn-ghost btn-small" id="predictions-history-btn">Historial</button>
       <span>${window.currentUser.username}</span>
       <button class="btn btn-ghost btn-small" id="logout-btn" data-i18n="auth.logout">${t('auth.logout')}</button>
     `;
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
+    document.getElementById('predictions-history-btn').addEventListener('click', openPredictionsModal);
+    checkForNewPredictionResults();
   } else {
     statusEl.innerHTML = `
       <button class="btn btn-primary btn-small" id="login-open-btn" data-i18n="auth.login">${t('auth.login')}</button>

@@ -19,7 +19,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.favorite import Favorite
 from app.models.prediction import Prediction
-from app.models.sport import Game, League, NewsArticle, Player, Sport, Team
+from app.models.sport import ExcludedTeam, Game, League, NewsArticle, Player, Sport, Team
 from app.models.user import User
 from app.services import balldontlie_service, football_data_service, mlb_service, news_service, translation_service
 from app.services.probability_service import estimate_home_win_probability, points_for_prediction
@@ -110,6 +110,9 @@ async def sync_mlb_teams_and_standings() -> None:
         team_details_by_id = {str(t["id"]): t for t in teams_data.get("teams", [])}
 
         valid_external_ids: set[str] = set()
+        excluded_ids = {
+            e.external_id for e in db.query(ExcludedTeam).filter(ExcludedTeam.league_id == league.id).all()
+        }
         for record in standings_data.get("records", []):
             division_id = record.get("division", {}).get("id")
             division_name = mlb_service.MLB_DIVISION_NAMES.get(division_id)
@@ -117,6 +120,8 @@ async def sync_mlb_teams_and_standings() -> None:
             for team_record in record.get("teamRecords", []):
                 team_info = team_record["team"]
                 external_id = str(team_info["id"])
+                if external_id in excluded_ids:
+                    continue  # borrado a mano por el panel de admin; nunca se recrea
                 valid_external_ids.add(external_id)
                 details = team_details_by_id.get(external_id, {})
 
@@ -504,7 +509,19 @@ async def sync_basketball_league(league_key: str) -> None:
 
         try:
             teams_data = await balldontlie_service.get_teams(league_key)
+            excluded_ids = {
+                e.external_id
+                for e in db.query(ExcludedTeam).filter(ExcludedTeam.league_id == league.id).all()
+            }
             for team_info in teams_data.get("data", []):
+                external_id = str(team_info["id"])
+
+                # Equipos borrados a mano por el panel de admin: nunca se
+                # vuelven a crear, sin importar qué diga la API sobre ellos
+                # (ver modelo ExcludedTeam para el porqué de esta lista).
+                if external_id in excluded_ids:
+                    continue
+
                 # balldontlie devuelve TODO el historial de franquicias de la
                 # NBA (ej. "Chicago Stags", "Washington Capitols" de los años
                 # 40), no solo los 30 equipos vigentes. No hay un nombre
@@ -515,7 +532,6 @@ async def sync_basketball_league(league_key: str) -> None:
                 if league_key == "nba" and not team_info.get("conference"):
                     continue
 
-                external_id = str(team_info["id"])
                 team = (
                     db.query(Team)
                     .filter(Team.league_id == league.id, Team.external_id == external_id)
@@ -739,8 +755,13 @@ async def sync_football_data_league(league_key: str) -> None:
 
         try:
             teams_data = await football_data_service.get_teams(league_key)
+            excluded_ids = {
+                e.external_id for e in db.query(ExcludedTeam).filter(ExcludedTeam.league_id == league.id).all()
+            }
             for team_info in teams_data.get("teams", []):
                 external_id = str(team_info["id"])
+                if external_id in excluded_ids:
+                    continue  # borrado a mano por el panel de admin; nunca se recrea
                 team = (
                     db.query(Team)
                     .filter(Team.league_id == league.id, Team.external_id == external_id)
@@ -1099,6 +1120,7 @@ def resolve_finished_predictions() -> None:
                 prediction.points_awarded = 0
 
             prediction.resolved_at = datetime.now(timezone.utc)
+            prediction.seen = False  # hay un resultado nuevo: el frontend debe avisarle al usuario
 
         db.commit()
         logger.info("Predicciones resueltas: %d", len(pending))
