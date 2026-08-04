@@ -219,17 +219,25 @@ async function renderPredictionRow(game) {
     </div>`;
 }
 
+// Debe reflejar exactamente _skew_probability_for_points en app/services/probability_service.py
+function skewProbabilityForPoints(p, strength = 1.8) {
+  const centered = (p - 0.5) * 2;
+  const sign = centered >= 0 ? 1 : -1;
+  const skewed = sign * Math.pow(Math.abs(centered), 1 / strength);
+  return Math.max(0, Math.min(1, skewed / 2 + 0.5));
+}
+
 // Debe reflejar exactamente points_for_prediction en app/services/probability_service.py
 function pointsFromProbability(p) {
   const MIN = 2, MAX = 20;
-  const points = MAX - (MAX - MIN) * p;
+  const points = MAX - (MAX - MIN) * skewProbabilityForPoints(p);
   return Math.round(Math.max(MIN, Math.min(MAX, points)));
 }
 
 // Debe reflejar exactamente points_lost_for_prediction en app/services/probability_service.py
 function pointsLostFromProbability(p) {
   const MIN = 2, MAX = 20;
-  const points = MIN + (MAX - MIN) * p;
+  const points = MIN + (MAX - MIN) * skewProbabilityForPoints(p);
   return Math.round(Math.max(MIN, Math.min(MAX, points)));
 }
 

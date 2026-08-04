@@ -79,3 +79,49 @@ def delete_team(
     delete_teams_cascade(db, [team_id])
     db.commit()
     return None
+
+
+@router.get("/excluded-teams")
+def list_excluded_teams(
+    league_key: str,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
+):
+    """
+    Equipos borrados a mano (ver ExcludedTeam) para esta liga — permite
+    deshacer un borrado por error (ej. si se borró un equipo real sin
+    querer, como pasó con Denver Nuggets).
+    """
+    league = db.query(League).filter(League.key == league_key).first()
+    if not league:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Liga no encontrada.")
+
+    excluded = (
+        db.query(ExcludedTeam)
+        .filter(ExcludedTeam.league_id == league.id)
+        .order_by(ExcludedTeam.excluded_at.desc())
+        .all()
+    )
+    return [
+        {"id": e.id, "external_id": e.external_id, "team_name": e.team_name, "excluded_at": e.excluded_at}
+        for e in excluded
+    ]
+
+
+@router.delete("/excluded-teams/{excluded_team_id}", status_code=status.HTTP_204_NO_CONTENT)
+def restore_excluded_team(
+    excluded_team_id: int,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
+):
+    """
+    Deshace un borrado: quita al equipo de la lista de exclusión. El
+    equipo en sí NO se recrea aquí — lo hace la sincronización normal en
+    su próximo ciclo (máx. 5 minutos), ya que dejará de estar excluido.
+    """
+    excluded = db.get(ExcludedTeam, excluded_team_id)
+    if not excluded:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No estaba en la lista de exclusión.")
+    db.delete(excluded)
+    db.commit()
+    return None

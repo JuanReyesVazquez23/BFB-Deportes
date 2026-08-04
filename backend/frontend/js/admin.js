@@ -42,26 +42,61 @@ async function loadAdminTeams() {
     const teams = await api.get(`/admin/teams?league_key=${select.value}`);
     if (!teams.length) {
       listEl.innerHTML = '<p>No hay equipos en esta liga.</p>';
+    } else {
+      listEl.innerHTML = teams
+        .map(
+          (team) => `
+        <div class="admin-team-row" data-team-id="${team.id}">
+          <span>
+            ${team.name || '(sin nombre)'}
+            ${team.is_placeholder ? ' · placeholder' : ''}
+            ${!team.conference && !team.division ? ' · sin conferencia/división' : ''}
+          </span>
+          <button class="btn btn-danger btn-small admin-delete-btn" data-team-id="${team.id}" data-team-name="${team.name || ''}">
+            Borrar
+          </button>
+        </div>`
+        )
+        .join('');
+
+      listEl.querySelectorAll('.admin-delete-btn').forEach((btn) => {
+        btn.addEventListener('click', () => handleAdminDelete(btn.dataset.teamId, btn.dataset.teamName));
+      });
+    }
+  } catch (err) {
+    listEl.innerHTML = `<p>${err.message}</p>`;
+  }
+
+  loadExcludedTeams();
+}
+
+async function loadExcludedTeams() {
+  const select = document.getElementById('admin-league-select');
+  const listEl = document.getElementById('admin-excluded-list');
+  if (!select || !listEl) return;
+
+  try {
+    const excluded = await api.get(`/admin/excluded-teams?league_key=${select.value}`);
+    if (!excluded.length) {
+      listEl.innerHTML = '';
       return;
     }
-    listEl.innerHTML = teams
-      .map(
-        (team) => `
-      <div class="admin-team-row" data-team-id="${team.id}">
-        <span>
-          ${team.name || '(sin nombre)'}
-          ${team.is_placeholder ? ' · placeholder' : ''}
-          ${!team.conference && !team.division ? ' · sin conferencia/división' : ''}
-        </span>
-        <button class="btn btn-danger btn-small admin-delete-btn" data-team-id="${team.id}" data-team-name="${team.name || ''}">
-          Borrar
+    listEl.innerHTML =
+      '<h4 class="stats-section-label">Borrados (se pueden restaurar)</h4>' +
+      excluded
+        .map(
+          (e) => `
+      <div class="admin-team-row">
+        <span>${e.team_name || e.external_id}</span>
+        <button class="btn btn-outline btn-small admin-restore-btn" data-excluded-id="${e.id}">
+          Restaurar
         </button>
       </div>`
-      )
-      .join('');
+        )
+        .join('');
 
-    listEl.querySelectorAll('.admin-delete-btn').forEach((btn) => {
-      btn.addEventListener('click', () => handleAdminDelete(btn.dataset.teamId, btn.dataset.teamName));
+    listEl.querySelectorAll('.admin-restore-btn').forEach((btn) => {
+      btn.addEventListener('click', () => handleAdminRestore(btn.dataset.excludedId));
     });
   } catch (err) {
     listEl.innerHTML = `<p>${err.message}</p>`;
@@ -70,12 +105,22 @@ async function loadAdminTeams() {
 
 async function handleAdminDelete(teamId, teamName) {
   const confirmed = window.confirm(
-    `¿Borrar "${teamName}"? Esto también borra sus partidos, jugadores y favoritos asociados. No se puede deshacer.`
+    `¿Borrar "${teamName}"? También borra sus partidos, jugadores y favoritos asociados. Puedes restaurarlo después desde "Borrados" si te equivocas.`
   );
   if (!confirmed) return;
 
   try {
     await api.delete(`/admin/teams/${teamId}`);
+    loadAdminTeams();
+  } catch (err) {
+    window.alert(err.message);
+  }
+}
+
+async function handleAdminRestore(excludedId) {
+  try {
+    await api.delete(`/admin/excluded-teams/${excludedId}`);
+    window.alert('Restaurado. Puede tardar hasta 5 minutos en volver a aparecer (la próxima sincronización lo recrea).');
     loadAdminTeams();
   } catch (err) {
     window.alert(err.message);

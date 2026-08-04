@@ -74,6 +74,33 @@ def implied_probability_from_odds(decimal_odds: float) -> float:
     return 1 / decimal_odds
 
 
+# >1 separa más los puntos entre ambos equipos cerca del 50/50 (ver
+# _skew_probability_for_points); 1.0 = lineal, sin separación extra.
+POINTS_CURVE_STRENGTH = 1.8
+
+
+def _skew_probability_for_points(p: float, strength: float = POINTS_CURVE_STRENGTH) -> float:
+    """
+    Antes de convertir una probabilidad en puntos, la aleja un poco más de
+    su punto medio (0.5). Con la fórmula lineal simple, un partido
+    moderadamente parejo (ej. 55%/45%) daba puntos casi idénticos para
+    ambos equipos (ej. 10 contra 12) — poca diferencia para que se sienta
+    interesante. Con esto, ese mismo partido separa más (ej. ~9 contra
+    ~14), y un partido realmente parejo (50/50 exacto) se mantiene igual
+    de parejo en puntos, que es lo correcto.
+
+    IMPORTANTE: esto solo afecta el CÁLCULO DE PUNTOS. La probabilidad que
+    se le muestra al usuario en la barra del partido (estimate_home_win_probability)
+    NUNCA se toca — sigue siendo la estimación real y honesta de quién
+    puede ganar; esto solo hace que el premio/castigo se sienta más
+    diferenciado entre las dos opciones.
+    """
+    centered = (p - 0.5) * 2  # -1 (0%) a 1 (100%)
+    sign = 1.0 if centered >= 0 else -1.0
+    skewed = sign * (abs(centered) ** (1 / strength))
+    return max(0.0, min(1.0, skewed / 2 + 0.5))
+
+
 def points_for_prediction(probability_of_chosen_team: float) -> int:
     """
     Traduce la probabilidad del equipo elegido en puntos BFB otorgados si
@@ -82,7 +109,7 @@ def points_for_prediction(probability_of_chosen_team: float) -> int:
     probability = 0.95 (muy probable que gane) -> puntos cercanos al mínimo
     probability = 0.05 (muy improbable que gane) -> puntos cercanos al máximo
     """
-    p = max(0.0, min(1.0, probability_of_chosen_team))
+    p = _skew_probability_for_points(max(0.0, min(1.0, probability_of_chosen_team)))
     min_pts, max_pts = settings.BET_MIN_POINTS, settings.BET_MAX_POINTS
 
     points = max_pts - (max_pts - min_pts) * p
@@ -102,7 +129,7 @@ def points_lost_for_prediction(probability_of_chosen_team: float) -> int:
     probability = 0.95 (muy probable que gane, y aun así pierde) -> pérdida cercana al máximo
     probability = 0.05 (muy improbable que gane, y en efecto pierde) -> pérdida cercana al mínimo
     """
-    p = max(0.0, min(1.0, probability_of_chosen_team))
+    p = _skew_probability_for_points(max(0.0, min(1.0, probability_of_chosen_team)))
     min_pts, max_pts = settings.BET_MIN_POINTS, settings.BET_MAX_POINTS
 
     points = min_pts + (max_pts - min_pts) * p
