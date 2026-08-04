@@ -57,9 +57,7 @@ function renderPredictionHistoryRow(p) {
   const matchup = formatMatchup(p);
   const game = p.game;
   const score = game && game.status === 'final' ? `${game.away_score} - ${game.home_score}` : '';
-
-  const statusLabel = { pending: 'Pendiente', correct: 'Acertaste', incorrect: 'Fallaste' }[p.status] || p.status;
-  const statusClass = { pending: '', correct: 'prediction-correct', incorrect: 'prediction-incorrect' }[p.status] || '';
+  const canDelete = p.status !== 'pending';
 
   let pointsTag = '';
   if (p.status === 'correct') {
@@ -68,6 +66,8 @@ function renderPredictionHistoryRow(p) {
     pointsTag = `<span class="points-pill points-pill-loss">${p.points_awarded}</span>`;
   }
 
+  const statusClass = { pending: '', correct: 'prediction-correct', incorrect: 'prediction-incorrect' }[p.status] || '';
+
   return `
     <div class="prediction-row ${statusClass}">
       <div>
@@ -75,10 +75,23 @@ function renderPredictionHistoryRow(p) {
         <span class="stats-subtitle">${matchup} ${score ? '· ' + score : ''}</span>
       </div>
       <div class="prediction-row-status">
-        <span>${statusLabel}</span>
         ${pointsTag}
+        ${canDelete ? `<button class="prediction-delete-btn" data-prediction-id="${p.id}" aria-label="Borrar">&times;</button>` : ''}
       </div>
     </div>`;
+}
+
+function renderPredictionsSection(title, list) {
+  if (!list.length) return '';
+  return `<h4 class="stats-section-label">${title} (${list.length})</h4>${list.map(renderPredictionHistoryRow).join('')}`;
+}
+
+function groupPredictionsByStatus(predictions) {
+  return {
+    pending: predictions.filter((p) => p.status === 'pending'),
+    correct: predictions.filter((p) => p.status === 'correct'),
+    incorrect: predictions.filter((p) => p.status === 'incorrect'),
+  };
 }
 
 async function openPredictionsModal() {
@@ -91,13 +104,42 @@ async function openPredictionsModal() {
 
   try {
     const predictions = await api.get('/predictions/me');
-    if (!predictions.length) {
-      listEl.innerHTML = '<p class="empty-state">Todavía no has hecho ninguna predicción.</p>';
-      return;
-    }
-    listEl.innerHTML = predictions.map(renderPredictionHistoryRow).join('');
+    renderPredictionsListInto(listEl, predictions);
   } catch (err) {
     listEl.innerHTML = `<p class="empty-state">${err.message}</p>`;
+  }
+}
+
+function renderPredictionsListInto(listEl, predictions) {
+  if (!predictions.length) {
+    listEl.innerHTML = '<p class="empty-state">Todavía no has hecho ninguna predicción.</p>';
+    return;
+  }
+
+  const groups = groupPredictionsByStatus(predictions);
+  listEl.innerHTML = `
+    <div class="predictions-summary">
+      <span>${groups.pending.length} pendientes</span>
+      <span class="prediction-correct">${groups.correct.length} ganadas</span>
+      <span class="prediction-incorrect">${groups.incorrect.length} perdidas</span>
+    </div>
+    ${renderPredictionsSection('Pendientes', groups.pending)}
+    ${renderPredictionsSection('Ganadas', groups.correct)}
+    ${renderPredictionsSection('Perdidas', groups.incorrect)}
+  `;
+
+  listEl.querySelectorAll('.prediction-delete-btn').forEach((btn) => {
+    btn.addEventListener('click', () => handleDeletePrediction(btn.dataset.predictionId, listEl));
+  });
+}
+
+async function handleDeletePrediction(predictionId, listEl) {
+  try {
+    await api.delete(`/predictions/${predictionId}`);
+    const predictions = await api.get('/predictions/me');
+    renderPredictionsListInto(listEl, predictions);
+  } catch (err) {
+    window.alert(err.message);
   }
 }
 
