@@ -105,6 +105,13 @@ class Player(Base):
     goals: Mapped[int | None] = mapped_column(Integer, nullable=True)
     assists: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # Solo para jugadores de NBA: el ID de stats.nba.com (DISTINTO al id
+    # interno de balldontlie que ya se usa como external_id). Se resuelve
+    # por nombre una vez sincronizado el roster — ver
+    # sync_service._match_nba_stats_ids. Es lo que permite pedir
+    # estadísticas reales de carrera/temporada a stats.nba.com.
+    nba_stats_person_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
     __table_args__ = (UniqueConstraint("team_id", "external_id", name="uq_player_team_external"),)
 
     team = relationship("Team", back_populates="players")

@@ -30,9 +30,15 @@ function renderPlayerCompareCard(data) {
   const pb = b.pitching_stats || {};
   const sa = a.soccer_stats || {};
   const sb = b.soccer_stats || {};
+  const csa = a.career_stats || {};
+  const csb = b.career_stats || {};
+  const ssa = a.season_stats || {};
+  const ssb = b.season_stats || {};
   const hasBatting = a.batting_stats || b.batting_stats;
   const hasPitching = a.pitching_stats || b.pitching_stats;
   const hasSoccer = a.soccer_stats || b.soccer_stats;
+  const hasCareer = a.career_stats || b.career_stats;
+  const hasSeason = a.season_stats || b.season_stats;
 
   return `
     <div class="stats-card">
@@ -81,7 +87,31 @@ function renderPlayerCompareCard(data) {
         </table>`
           : ''
       }
-      ${!hasBatting && !hasPitching && !hasSoccer ? `<p class="empty-state">${t('stats.noStatsYet')}</p>` : ''}
+      ${
+        hasSeason
+          ? `<h4 class="stats-section-label">${t('stats.seasonStats')}</h4>
+        <table class="compare-table">
+          ${compareRow('stats.points', ssa.points, ssb.points)}
+          ${compareRow('stats.rebounds', ssa.rebounds, ssb.rebounds)}
+          ${compareRow('stats.assists', ssa.assists, ssb.assists)}
+        </table>`
+          : ''
+      }
+      ${
+        hasCareer
+          ? `<h4 class="stats-section-label">${t('stats.careerStats')}</h4>
+        <table class="compare-table">
+          ${compareRow('stats.points', csa.points, csb.points)}
+          ${compareRow('stats.rebounds', csa.rebounds, csb.rebounds)}
+          ${compareRow('stats.assists', csa.assists, csb.assists)}
+        </table>`
+          : ''
+      }
+      ${
+        !hasBatting && !hasPitching && !hasSoccer && !hasCareer && !hasSeason
+          ? `<p class="empty-state">${t('stats.noStatsYet')}</p>`
+          : ''
+      }
     </div>`;
 }
 
@@ -186,8 +216,46 @@ function renderSoccerStatsBlock(stats) {
     </div>`;
 }
 
+function renderSoccerSeasonStatsBlock(stats) {
+  if (!stats) return '';
+  return `
+    <h4 class="stats-section-label">${t('stats.seasonStats')}</h4>
+    <div class="stats-record-row stats-record-wrap">
+      <div><strong>${stats.appearances ?? '-'}</strong><span>${t('stats.gamesPlayed')}</span></div>
+      <div><strong>${stats.goals ?? 0}</strong><span>${t('stats.goals')}</span></div>
+      <div><strong>${stats.assists ?? 0}</strong><span>${t('stats.assists')}</span></div>
+      <div><strong>${stats.minutes ?? '-'}</strong><span>${t('stats.minutes')}</span></div>
+      <div><strong>${stats.yellow_cards ?? 0}</strong><span>${t('stats.yellowCards')}</span></div>
+      <div><strong>${stats.red_cards ?? 0}</strong><span>${t('stats.redCards')}</span></div>
+      <div><strong>${stats.avg_rating ?? '-'}</strong><span>${t('stats.avgRating')}</span></div>
+    </div>`;
+}
+
+function renderBasketballStatsBlock(stats, label) {
+  if (!stats) return '';
+  return `
+    <h4 class="stats-section-label">${label}</h4>
+    <div class="stats-record-row stats-record-wrap">
+      <div><strong>${stats.points ?? '-'}</strong><span>${t('stats.points')}</span></div>
+      <div><strong>${stats.rebounds ?? '-'}</strong><span>${t('stats.rebounds')}</span></div>
+      <div><strong>${stats.assists ?? '-'}</strong><span>${t('stats.assists')}</span></div>
+      <div><strong>${stats.steals ?? '-'}</strong><span>${t('stats.steals')}</span></div>
+      <div><strong>${stats.blocks ?? '-'}</strong><span>${t('stats.blocks')}</span></div>
+      <div><strong>${stats.fg_pct != null ? (stats.fg_pct * 100).toFixed(1) + '%' : '-'}</strong><span>FG%</span></div>
+      <div><strong>${stats.fg3_pct != null ? (stats.fg3_pct * 100).toFixed(1) + '%' : '-'}</strong><span>3P%</span></div>
+      <div><strong>${stats.ft_pct != null ? (stats.ft_pct * 100).toFixed(1) + '%' : '-'}</strong><span>FT%</span></div>
+      <div><strong>${stats.games_played ?? '-'}</strong><span>${t('stats.gamesPlayed')}</span></div>
+    </div>`;
+}
+
 function renderPlayerCard(player) {
-  const hasStats = player.batting_stats || player.pitching_stats || player.soccer_stats;
+  const hasStats =
+    player.batting_stats ||
+    player.pitching_stats ||
+    player.soccer_stats ||
+    player.soccer_season_stats ||
+    player.career_stats ||
+    player.season_stats;
   return `
     <div class="stats-card">
       <div class="stats-card-header">
@@ -202,7 +270,9 @@ function renderPlayerCard(player) {
       </div>
       ${renderBattingStatsBlock(player.batting_stats)}
       ${renderPitchingStatsBlock(player.pitching_stats)}
-      ${renderSoccerStatsBlock(player.soccer_stats)}
+      ${player.soccer_season_stats ? renderSoccerSeasonStatsBlock(player.soccer_season_stats) : renderSoccerStatsBlock(player.soccer_stats)}
+      ${renderBasketballStatsBlock(player.season_stats, t('stats.seasonStats'))}
+      ${renderBasketballStatsBlock(player.career_stats, t('stats.careerStats'))}
       ${!hasStats ? `<p class="empty-state">${t('stats.noStatsYet')}</p>` : ''}
     </div>`;
 }

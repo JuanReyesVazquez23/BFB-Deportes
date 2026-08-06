@@ -66,6 +66,14 @@ class Settings(BaseSettings):
     FOOTBALL_DATA_API_BASE: str = "https://api.football-data.org/v4"
     FOOTBALL_DATA_API_KEY: str = ""
 
+    # API-Football (api-sports.io), endpoint directo (no RapidAPI): estadísticas
+    # detalladas de jugador de fútbol (goles, asistencias, tarjetas, calificación,
+    # minutos), que football-data.org no da en su plan gratuito (solo goleadores
+    # destacados). Plan gratuito: 100 peticiones/día, sin tarjeta. Se obtiene en
+    # https://www.api-football.com — la key va en el header x-apisports-key.
+    API_FOOTBALL_API_BASE: str = "https://v3.football.api-sports.io"
+    API_FOOTBALL_KEY: str = ""
+
     # --- Noticias (RSS oficiales, gratuitos, con imagen) ---
     NEWS_RSS_GENERAL: str = "https://www.espn.com/espn/rss/news"
     NEWS_RSS_MLB: str = "https://www.espn.com/espn/rss/mlb/news"

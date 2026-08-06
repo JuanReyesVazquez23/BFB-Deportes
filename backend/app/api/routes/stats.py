@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_db
 from app.models.sport import Game, League, Player, Sport, Team
-from app.services import mlb_service
+from app.core.config import settings
+from app.services import football_stats_service, mlb_service, nba_stats_service
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -175,6 +176,8 @@ async def _build_player_profile(player_id: int, db: Session) -> dict:
     batting_stats = None
     pitching_stats = None
     soccer_stats = None
+    career_stats = None
+    season_stats = None
 
     is_mlb_player = player.team and player.team.league and player.team.league.data_provider == "mlb_stats_api"
     if is_mlb_player:
@@ -186,12 +189,44 @@ async def _build_player_profile(player_id: int, db: Session) -> dict:
         except Exception:
             pass  # el perfil se muestra igual, solo sin números, en vez de fallar la petición completa
 
-    # Jugadores de fútbol: goles/asistencias vienen precargados desde el
-    # listado de goleadores (football-data.org), no se consultan en vivo.
-    # Es la única estadística de jugador disponible sin plan de pago, así
-    # que solo cubre a los goleadores destacados de cada competencia.
+    # NBA: estadísticas reales vía stats.nba.com (ver nba_stats_service.py
+    # para el porqué de usar esta fuente en vez de balldontlie, que no las
+    # incluye en su plan gratuito). Requiere que el jugador ya se haya
+    # emparejado por nombre con su PERSON_ID oficial — ver
+    # sync_service._match_nba_stats_ids; si todavía no se emparejó, o si
+    # stats.nba.com no responde, el perfil se muestra igual, sin números.
+    is_nba_player = player.team and player.team.league and player.team.league.key == "nba"
+    if is_nba_player and player.nba_stats_person_id:
+        try:
+            raw_career = await nba_stats_service.get_player_career_stats(int(player.nba_stats_person_id))
+            career_stats, season_stats = nba_stats_service.extract_career_and_season_stats(raw_career)
+        except Exception:
+            pass
+
+    # Jugadores de fútbol: goles/asistencias simples vienen precargados
+    # desde el listado de goleadores (football-data.org, siempre
+    # disponible, sin necesidad de otra key). Si además hay una API_FOOTBALL_KEY
+    # configurada, se intenta enriquecer con estadísticas detalladas en vivo
+    # (tarjetas, minutos, calificación) — ver football_stats_service.py para
+    # las limitaciones reales del plan gratuito de esa API.
+    soccer_season_stats = None
     if player.goals is not None or player.assists is not None:
         soccer_stats = {"goals": player.goals or 0, "assists": player.assists or 0}
+
+        if settings.API_FOOTBALL_KEY:
+            team_name = player.team.name if player.team else None
+            try:
+                current_year = datetime.now(timezone.utc).year
+                raw = await football_stats_service.search_player_season_stats(player.full_name, current_year)
+                soccer_season_stats = football_stats_service.extract_best_match_stats(raw, team_name)
+                if not soccer_season_stats:
+                    # el plan gratuito puede no tener la temporada actual todavía
+                    raw = await football_stats_service.search_player_season_stats(
+                        player.full_name, current_year - 1
+                    )
+                    soccer_season_stats = football_stats_service.extract_best_match_stats(raw, team_name)
+            except Exception:
+                pass  # se queda con soccer_stats (goles/asistencias simples) en vez de fallar
 
     return {
         "id": player.id,
@@ -209,6 +244,9 @@ async def _build_player_profile(player_id: int, db: Session) -> dict:
         "batting_stats": batting_stats,
         "pitching_stats": pitching_stats,
         "soccer_stats": soccer_stats,
+        "soccer_season_stats": soccer_season_stats,
+        "career_stats": career_stats,
+        "season_stats": season_stats,
     }
 
 

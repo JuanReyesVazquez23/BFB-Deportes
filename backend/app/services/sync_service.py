@@ -21,7 +21,14 @@ from app.models.favorite import Favorite
 from app.models.prediction import Prediction
 from app.models.sport import ExcludedTeam, Game, League, NewsArticle, Player, Sport, Team
 from app.models.user import User
-from app.services import balldontlie_service, football_data_service, mlb_service, news_service, translation_service
+from app.services import (
+    balldontlie_service,
+    football_data_service,
+    mlb_service,
+    nba_stats_service,
+    news_service,
+    translation_service,
+)
 from app.services.probability_service import (
     estimate_home_win_probability,
     points_for_prediction,
@@ -725,8 +732,50 @@ async def sync_basketball_rosters(league_key: str = "nba") -> None:
 
         if teams_needing_sync:
             logger.info("Roster de NBA sincronizado (%d equipo(s)).", len(teams_needing_sync))
+
+        await _match_nba_stats_ids(db, league)
     finally:
         db.close()
+
+
+async def _match_nba_stats_ids(db: Session, league: League) -> None:
+    """
+    Empareja por nombre a los jugadores de NBA ya sincronizados (desde
+    balldontlie, que usa su propio ID interno) contra el índice oficial de
+    stats.nba.com (que usa OTRO ID, el PERSON_ID), para poder pedirles
+    estadísticas reales más adelante. Solo hace falta una vez por
+    jugador — los que ya tienen nba_stats_person_id no se vuelven a tocar.
+
+    Un jugador que no se logre emparejar (ej. nombre escrito de forma muy
+    distinta entre las dos fuentes) simplemente se queda sin estadísticas
+    en su perfil, en vez de romper el resto de la sincronización.
+    """
+    unmatched = (
+        db.query(Player)
+        .join(Team, Player.team_id == Team.id)
+        .filter(Team.league_id == league.id, Player.nba_stats_person_id.is_(None))
+        .all()
+    )
+    if not unmatched:
+        return
+
+    try:
+        raw_index = await nba_stats_service.get_all_players_index()
+    except Exception:
+        logger.exception("No se pudo obtener el índice de jugadores de stats.nba.com.")
+        return
+
+    name_to_id = nba_stats_service.build_name_to_id_map(raw_index)
+    matched = 0
+    for player in unmatched:
+        person_id = name_to_id.get(nba_stats_service.normalize_player_name(player.full_name))
+        if person_id:
+            player.nba_stats_person_id = person_id
+            matched += 1
+
+    if matched:
+        db.commit()
+        logger.info("Emparejados %d jugador(es) de NBA con stats.nba.com.", matched)
 
 
 FOOTBALL_DATA_STATUS_MAP = {
