@@ -80,6 +80,12 @@ class Team(Base):
     division: Mapped[str | None] = mapped_column(String(60), nullable=True)
     conference: Mapped[str | None] = mapped_column(String(60), nullable=True)
     standings_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Solo NBA: última vez que se sincronizó el roster completo de este
+    # equipo contra balldontlie (ver sync_service.sync_basketball_rosters).
+    # Permite rotar entre todos los equipos con el tiempo (no solo rellenar
+    # los que tienen 0 jugadores), así también se corrige un roster que ya
+    # se había sincronizado mal antes (ej. con jugadores retirados).
+    roster_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (UniqueConstraint("league_id", "external_id", name="uq_team_league_external"),)
 

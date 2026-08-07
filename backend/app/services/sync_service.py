@@ -438,6 +438,19 @@ def _recompute_win_loss_from_games(db: Session, league: League) -> None:
         team.standings_updated_at = datetime.now(timezone.utc)
 
 
+def delete_players_cascade(db: Session, player_ids: list[int]) -> int:
+    """
+    Borra los jugadores indicados junto con los favoritos que apunten a
+    ellos (para no violar la llave foránea). Se usa en la limpieza de
+    rosters de NBA (jugadores retirados que ya no están en el roster
+    activo) y se puede reutilizar donde haga falta borrar jugadores.
+    """
+    if not player_ids:
+        return 0
+    db.query(Favorite).filter(Favorite.player_id.in_(player_ids)).delete(synchronize_session=False)
+    return db.query(Player).filter(Player.id.in_(player_ids)).delete(synchronize_session=False)
+
+
 def delete_teams_cascade(db: Session, team_ids: list[int]) -> int:
     """
     Borra los equipos indicados junto con todo lo que depende de ellos, en
@@ -673,20 +686,31 @@ async def sync_basketball_rosters(league_key: str = "nba") -> None:
     """
     Sincroniza el roster (nombre, posición, número) de cada equipo de la
     liga, para que el buscador de estadísticas encuentre jugadores reales
-    de NBA por nombre.
+    y ACTIVOS de NBA por nombre.
 
-    Solo se consulta un equipo si todavía no tiene ningún jugador guardado
-    (no hay una forma barata de detectar cambios de plantilla sin gastar
-    otra llamada a la API); como máximo NBA_ROSTER_SYNC_BATCH_SIZE equipos
-    por ciclo, así el primer respaldo completo se reparte en varios ciclos
-    de 5 minutos en vez de tardar 10+ minutos de un solo golpe.
+    Usa el endpoint "/players/active" de balldontlie (confirmado también
+    para MLB/WNBA), que sí excluye a los jugadores retirados — el
+    endpoint genérico "/players" devuelve TODO el historial del equipo,
+    retirados incluidos.
+
+    Se procesan como máximo NBA_ROSTER_SYNC_BATCH_SIZE equipos por ciclo,
+    los que tengan el roster sincronizado hace más tiempo primero (o
+    nunca sincronizados). Esto es una ROTACIÓN, no solo un respaldo único:
+    cada equipo se vuelve a revisar con el tiempo, así se corrige un
+    roster que ya se había guardado mal antes (ej. con jugadores
+    retirados de una sincronización previa a este arreglo) y no solo se
+    rellenan los equipos vacíos.
+
+    Reconciliación: cualquier jugador que YA esté guardado para el equipo
+    pero que la API ya no reporte como activo se elimina (ej. un jugador
+    que se retiró o fue cortado del equipo).
 
     IMPORTANTE (limitación real de la API, no del código): el plan
     gratuito de balldontlie incluye jugadores (nombre, posición, equipo)
     pero NO estadísticas (puntos, rebotes, asistencias) — eso requiere un
     plan de pago (ALL-STAR o GOAT, ver balldontlie.io/pricing). Por eso el
-    perfil de un jugador de NBA se muestra sin números, igual que ya pasa
-    cuando a un jugador de MLB no se le encuentran estadísticas.
+    perfil de un jugador de NBA se muestra sin números hasta que se
+    empareje con stats.nba.com (ver _match_nba_stats_ids).
     """
     db = SessionLocal()
     try:
@@ -694,26 +718,28 @@ async def sync_basketball_rosters(league_key: str = "nba") -> None:
         if not league:
             return
 
-        teams_needing_sync = (
+        teams_to_sync = (
             db.query(Team)
             .filter(Team.league_id == league.id)
-            .filter(~Team.players.any())
+            .order_by(Team.roster_synced_at.asc().nullsfirst())
             .limit(NBA_ROSTER_SYNC_BATCH_SIZE)
             .all()
         )
-        for team in teams_needing_sync:
+        for team in teams_to_sync:
             try:
-                players_data = await balldontlie_service.get_players(league_key, int(team.external_id))
+                players_data = await balldontlie_service.get_active_players(league_key, int(team.external_id))
             except Exception:
-                logger.exception("No se pudo obtener el roster de '%s' (NBA).", team.name)
+                logger.exception("No se pudo obtener el roster activo de '%s' (NBA).", team.name)
                 await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
                 continue
 
+            active_external_ids: set[str] = set()
             for player_info in players_data.get("data", []):
                 external_id = str(player_info.get("id", ""))
                 full_name = f"{player_info.get('first_name', '')} {player_info.get('last_name', '')}".strip()
                 if not external_id or not full_name:
                     continue
+                active_external_ids.add(external_id)
 
                 player = (
                     db.query(Player)
@@ -727,11 +753,30 @@ async def sync_basketball_rosters(league_key: str = "nba") -> None:
                 player.position = player_info.get("position")
                 player.jersey_number = player_info.get("jersey_number")
 
+            # Reconciliación: jugadores guardados para este equipo que la
+            # API ya no reporta como activos (retirados, cortados, etc.).
+            # Medida de seguridad: si la API devolvió una lista vacía (un
+            # equipo real de NBA siempre tiene jugadores; una lista vacía
+            # es más probable un fallo pasajero), no se borra a nadie — en
+            # vez de vaciar el roster completo por error.
+            removed = 0
+            if active_external_ids:
+                stale_player_ids = [
+                    p.id
+                    for p in db.query(Player)
+                    .filter(Player.team_id == team.id, Player.external_id.notin_(active_external_ids))
+                    .all()
+                ]
+                removed = delete_players_cascade(db, stale_player_ids)
+
+            team.roster_synced_at = datetime.now(timezone.utc)
             db.commit()
+            if removed:
+                logger.info("Roster de '%s': %d jugador(es) inactivo(s) eliminado(s).", team.name, removed)
             await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
 
-        if teams_needing_sync:
-            logger.info("Roster de NBA sincronizado (%d equipo(s)).", len(teams_needing_sync))
+        if teams_to_sync:
+            logger.info("Roster de NBA sincronizado (%d equipo(s)).", len(teams_to_sync))
 
         await _match_nba_stats_ids(db, league)
     finally:
@@ -947,7 +992,18 @@ async def sync_football_data_league(league_key: str) -> None:
             await asyncio.sleep(FOOTBALL_DATA_CALL_SPACING_SECONDS)
             try:
                 scorers_data = await football_data_service.get_scorers(league_key, season=current_season)
-                for entry in scorers_data.get("scorers", []):
+                scorers = scorers_data.get("scorers", [])
+                if not scorers:
+                    # Normal al arrancar una temporada nueva: con 0-1 jornadas
+                    # jugadas, puede que todavía nadie tenga goles. Mientras
+                    # tanto, se muestran los goleadores de la temporada
+                    # anterior (ya jugada completa) en vez de dejar la
+                    # búsqueda de jugadores de fútbol vacía.
+                    await asyncio.sleep(FOOTBALL_DATA_CALL_SPACING_SECONDS)
+                    scorers_data = await football_data_service.get_scorers(league_key, season=current_season - 1)
+                    scorers = scorers_data.get("scorers", [])
+
+                for entry in scorers:
                     player_info = entry.get("player") or {}
                     team_info = entry.get("team") or {}
                     external_id = str(player_info.get("id", ""))

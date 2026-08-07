@@ -124,7 +124,7 @@ Made by Juan Reyes
 | Historial de predicciones + aviso de ganaste/perdiste | ✅ Completo |
 | Favoritos (equipo/jugador/liga) | ✅ Completo |
 | **MLB (Béisbol)** — posiciones, jugadores hoy, en vivo, resultados, estadísticas reales de bateo/pitcheo | ✅ Funcional de extremo a extremo (MLB Stats API, gratuita, sin key) |
-| **NBA (Basketball)** — equipos vigentes (se filtran franquicias históricas), posiciones reales calculadas de los partidos, roster, estadísticas reales de carrera y temporada actual | ✅ Funcional (balldontlie para equipos/roster/partidos + stats.nba.com para estadísticas — ver sección de arquitectura) |
+| **NBA (Basketball)** — equipos vigentes (se filtran franquicias históricas), posiciones reales calculadas de los partidos, roster de jugadores activos (sin retirados, vía `/players/active`), estadísticas reales de carrera y temporada actual | ✅ Funcional (balldontlie para equipos/roster/partidos + stats.nba.com para estadísticas — ver sección de arquitectura) |
 | **Fútbol** (EPL, La Liga, Serie A, Bundesliga, Ligue 1, Champions League) — equipos, posiciones, partidos, goleadores con goles/asistencias reales | ✅ Funcional (football-data.org) |
 | Estadísticas detalladas de jugador de fútbol (tarjetas, minutos, calificación — vía API-Football) | ✅ Conectado — solo falta que `API_FOOTBALL_KEY` esté configurada en las variables de entorno de Render |
 | Panel de administración (borrar/restaurar equipos incorrectos a mano) | ✅ Completo — 5 taps en el footer, solo funcional para usuarios en `ADMIN_USERNAMES` |

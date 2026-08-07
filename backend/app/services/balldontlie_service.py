@@ -136,6 +136,23 @@ async def get_players(league_key: str, team_id: int) -> dict:
         return resp.json()
 
 
+async def get_active_players(league_key: str, team_id: int) -> dict:
+    """
+    Como get_players, pero usando el endpoint "/players/active" en vez de
+    "/players" — este SÍ filtra a jugadores retirados (confirmado en la
+    documentación de balldontlie para NBA/WNBA/MLB). El endpoint "/players"
+    normal devuelve TODO el historial de un equipo, retirados incluidos,
+    que es justo lo que no se quiere mostrar.
+    """
+    path = LEAGUE_PATHS[league_key]
+    url = f"{settings.BALLDONTLIE_API_BASE}/{path}/{_api_version(league_key)}/players/active"
+    params = {"team_ids[]": team_id, "per_page": 100}
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        resp = await client.get(url, params=params, headers=_headers())
+        resp.raise_for_status()
+        return resp.json()
+
+
 async def get_odds(league_key: str, game_id: int) -> dict:
     """
     Cuotas/odds del partido, si el plan contratado en balldontlie las incluye.
