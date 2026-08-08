@@ -49,6 +49,12 @@ class League(Base):
     # Segmento de ruta usado por balldontlie (ej. "nba", "epl", "fifa"); nulo si no aplica.
     provider_league_path: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
+    # False = el panel de administración "borró" esta liga (ej. un evento ya
+    # pasado, como un Mundial anterior). Mientras esté en False, ninguna
+    # sincronización periódica la vuelve a tocar — se puede reactivar desde
+    # el mismo panel cuando haga falta de nuevo (ej. el próximo Mundial).
+    sync_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
     sport = relationship("Sport", back_populates="leagues")
     teams = relationship("Team", back_populates="league")
     games = relationship("Game", back_populates="league")

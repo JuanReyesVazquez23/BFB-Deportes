@@ -22,6 +22,7 @@ function toggleAdminPanel() {
   panel.classList.toggle('hidden');
   if (!panel.classList.contains('hidden')) {
     renderAdminLeagueOptions();
+    loadAdminLeagues();
   }
 }
 
@@ -122,6 +123,65 @@ async function handleAdminRestore(excludedId) {
     await api.delete(`/admin/excluded-teams/${excludedId}`);
     window.alert('Restaurado. Puede tardar hasta 5 minutos en volver a aparecer (la próxima sincronización lo recrea).');
     loadAdminTeams();
+  } catch (err) {
+    window.alert(err.message);
+  }
+}
+
+async function loadAdminLeagues() {
+  const listEl = document.getElementById('admin-leagues-list');
+  if (!listEl) return;
+
+  listEl.innerHTML = 'Cargando…';
+  try {
+    const leagues = await api.get('/admin/leagues');
+    listEl.innerHTML = leagues
+      .map(
+        (lg) => `
+      <div class="admin-team-row">
+        <span>
+          ${lg.name} · ${lg.team_count} equipo(s)
+          ${!lg.sync_enabled ? ' · <strong>borrada</strong>' : ''}
+        </span>
+        ${
+          lg.sync_enabled
+            ? `<button class="btn btn-danger btn-small admin-delete-league-btn" data-league-key="${lg.key}" data-league-name="${lg.name}">Borrar liga</button>`
+            : `<button class="btn btn-outline btn-small admin-enable-league-btn" data-league-key="${lg.key}">Reactivar</button>`
+        }
+      </div>`
+      )
+      .join('');
+
+    listEl.querySelectorAll('.admin-delete-league-btn').forEach((btn) => {
+      btn.addEventListener('click', () => handleDeleteLeague(btn.dataset.leagueKey, btn.dataset.leagueName));
+    });
+    listEl.querySelectorAll('.admin-enable-league-btn').forEach((btn) => {
+      btn.addEventListener('click', () => handleEnableLeague(btn.dataset.leagueKey));
+    });
+  } catch (err) {
+    listEl.innerHTML = `<p>${err.message}</p>`;
+  }
+}
+
+async function handleDeleteLeague(leagueKey, leagueName) {
+  const confirmed = window.confirm(
+    `¿Borrar TODA la liga "${leagueName}"? Esto borra todos sus equipos, partidos, jugadores y favoritos, y detiene su sincronización automática (útil para un evento ya pasado). Se puede reactivar después desde este mismo panel.`
+  );
+  if (!confirmed) return;
+
+  try {
+    await api.delete(`/admin/leagues/${leagueKey}`);
+    loadAdminLeagues();
+  } catch (err) {
+    window.alert(err.message);
+  }
+}
+
+async function handleEnableLeague(leagueKey) {
+  try {
+    await api.post(`/admin/leagues/${leagueKey}/enable`, {});
+    window.alert('Reactivada. Sus datos se vuelven a sincronizar solos en los próximos minutos.');
+    loadAdminLeagues();
   } catch (err) {
     window.alert(err.message);
   }

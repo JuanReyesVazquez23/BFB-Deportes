@@ -111,6 +111,9 @@ async def sync_mlb_teams_and_standings() -> None:
         if not league:
             logger.warning("Liga MLB no existe todavía en la BD; ejecuta ensure_base_catalog primero.")
             return
+        if not league.sync_enabled:
+            logger.info("Liga '%s' desactivada desde el panel de admin; se omite su sincronización.", league.key)
+            return
 
         standings_data = await mlb_service.get_standings(CURRENT_MLB_SEASON)
 
@@ -203,6 +206,9 @@ async def sync_mlb_games(target_date: date | None = None) -> None:
     try:
         league = db.query(League).filter(League.key == "mlb").first()
         if not league:
+            return
+        if not league.sync_enabled:
+            logger.info("Liga '%s' desactivada desde el panel de admin; se omite su sincronización.", league.key)
             return
 
         base_date = target_date or datetime.now(timezone.utc).date()
@@ -530,6 +536,9 @@ async def sync_basketball_league(league_key: str) -> None:
         if not league:
             logger.warning("Liga '%s' no existe en la BD; ejecuta ensure_base_catalog primero.", league_key)
             return
+        if not league.sync_enabled:
+            logger.info("Liga '%s' desactivada desde el panel de admin; se omite su sincronización.", league.key)
+            return
 
         try:
             teams_data = await balldontlie_service.get_teams(league_key)
@@ -717,6 +726,9 @@ async def sync_basketball_rosters(league_key: str = "nba") -> None:
         league = db.query(League).filter(League.key == league_key).first()
         if not league:
             return
+        if not league.sync_enabled:
+            logger.info("Liga '%s' desactivada desde el panel de admin; se omite su sincronización.", league.key)
+            return
 
         teams_to_sync = (
             db.query(Team)
@@ -849,6 +861,9 @@ async def sync_football_data_league(league_key: str) -> None:
         league = db.query(League).filter(League.key == league_key).first()
         if not league:
             logger.warning("Liga '%s' no existe en la BD; ejecuta ensure_base_catalog primero.", league_key)
+            return
+        if not league.sync_enabled:
+            logger.info("Liga '%s' desactivada desde el panel de admin; se omite su sincronización.", league.key)
             return
 
         try:
@@ -1063,6 +1078,9 @@ async def sync_soccer_league(league_key: str) -> None:
         if not league:
             logger.warning("Liga '%s' no existe en la BD; ejecuta ensure_base_catalog primero.", league_key)
             return
+        if not league.sync_enabled:
+            logger.info("Liga '%s' desactivada desde el panel de admin; se omite su sincronización.", league.key)
+            return
 
         try:
             teams_data = await balldontlie_service.get_teams(league_key)
@@ -1157,6 +1175,9 @@ async def sync_mlb_rosters() -> None:
     try:
         league = db.query(League).filter(League.key == "mlb").first()
         if not league:
+            return
+        if not league.sync_enabled:
+            logger.info("Liga '%s' desactivada desde el panel de admin; se omite su sincronización.", league.key)
             return
 
         teams = db.query(Team).filter(Team.league_id == league.id).all()

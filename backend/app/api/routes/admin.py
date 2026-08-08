@@ -125,3 +125,71 @@ def restore_excluded_team(
     db.delete(excluded)
     db.commit()
     return None
+
+
+@router.get("/leagues")
+def list_all_leagues(
+    db: Session = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
+):
+    """
+    Todas las ligas del sitio (de cualquier deporte), con cuántos equipos
+    tiene guardados cada una y si su sincronización está activa — para
+    poder borrar una liga completa (ej. un evento ya pasado) y volverla a
+    activar más adelante si hace falta.
+    """
+    leagues = db.query(League).order_by(League.name).all()
+    return [
+        {
+            "key": lg.key,
+            "name": lg.name,
+            "sync_enabled": lg.sync_enabled,
+            "team_count": db.query(Team).filter(Team.league_id == lg.id).count(),
+        }
+        for lg in leagues
+    ]
+
+
+@router.delete("/leagues/{league_key}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_league(
+    league_key: str,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
+):
+    """
+    Borra TODOS los equipos de la liga (con sus partidos, jugadores y
+    favoritos, en cascada) y desactiva su sincronización periódica — para
+    que se quede borrada de verdad (ej. un evento ya pasado, como un
+    Mundial anterior) y no vuelva a aparecer en el siguiente ciclo de 5
+    minutos. Se puede reactivar con POST /admin/leagues/{league_key}/enable
+    cuando haga falta de nuevo (ej. el próximo Mundial).
+    """
+    league = db.query(League).filter(League.key == league_key).first()
+    if not league:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Liga no encontrada.")
+
+    team_ids = [t.id for t in db.query(Team).filter(Team.league_id == league.id).all()]
+    delete_teams_cascade(db, team_ids)
+    league.sync_enabled = False
+    db.commit()
+    return None
+
+
+@router.post("/leagues/{league_key}/enable", status_code=status.HTTP_204_NO_CONTENT)
+def enable_league(
+    league_key: str,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(get_current_admin_user),
+):
+    """
+    Reactiva la sincronización de una liga que se había borrado. No trae
+    los datos de vuelta aquí mismo — eso lo hace el siguiente ciclo de
+    sincronización normal (máx. 5 minutos), ya que la liga vuelve a estar
+    habilitada.
+    """
+    league = db.query(League).filter(League.key == league_key).first()
+    if not league:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Liga no encontrada.")
+    league.sync_enabled = True
+    db.commit()
+    return None
