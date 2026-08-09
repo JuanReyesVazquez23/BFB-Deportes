@@ -685,10 +685,16 @@ async def sync_basketball_league(league_key: str) -> None:
         db.close()
 
 
-# Equipos por ciclo al sincronizar rosters de NBA (5 min entre ciclos). Se
-# limita para no acumular demasiadas llamadas seguidas en una sola corrida
-# y respetar el límite gratuito de balldontlie (5 peticiones/minuto).
-NBA_ROSTER_SYNC_BATCH_SIZE = 6
+# Equipos por ciclo al sincronizar rosters de NBA. Se puede cubrir toda la
+# liga de una vez (antes se limitaba a 6 por ciclo) porque la sincronización
+# corre en su propio hilo, separado del que atiende peticiones HTTP — ya no
+# hay riesgo de bloquear el servidor por tardar varios minutos.
+NBA_ROSTER_SYNC_BATCH_SIZE = 30
+
+# Un equipo no se vuelve a sincronizar si ya se hizo hace menos de esto —
+# evita gastar 30 llamadas a la API en cada ciclo de 5 minutos para siempre,
+# cuando los rosters casi no cambian de un día para otro.
+NBA_ROSTER_STALE_AFTER = timedelta(hours=12)
 
 
 async def sync_basketball_rosters(league_key: str = "nba") -> None:
@@ -702,13 +708,12 @@ async def sync_basketball_rosters(league_key: str = "nba") -> None:
     endpoint genérico "/players" devuelve TODO el historial del equipo,
     retirados incluidos.
 
-    Se procesan como máximo NBA_ROSTER_SYNC_BATCH_SIZE equipos por ciclo,
-    los que tengan el roster sincronizado hace más tiempo primero (o
-    nunca sincronizados). Esto es una ROTACIÓN, no solo un respaldo único:
-    cada equipo se vuelve a revisar con el tiempo, así se corrige un
-    roster que ya se había guardado mal antes (ej. con jugadores
-    retirados de una sincronización previa a este arreglo) y no solo se
-    rellenan los equipos vacíos.
+    Se procesan hasta NBA_ROSTER_SYNC_BATCH_SIZE equipos por ciclo, dando
+    prioridad a los que nunca se han sincronizado o llevan más de
+    NBA_ROSTER_STALE_AFTER sin actualizarse — así el primer ciclo cubre
+    toda la liga de una vez (jugadores populares incluidos, sin esperar
+    varias rotaciones), y los siguientes ciclos no vuelven a gastar
+    llamadas en equipos que ya se sincronizaron hace poco.
 
     Reconciliación: cualquier jugador que YA esté guardado para el equipo
     pero que la API ya no reporte como activo se elimina (ej. un jugador
@@ -730,9 +735,11 @@ async def sync_basketball_rosters(league_key: str = "nba") -> None:
             logger.info("Liga '%s' desactivada desde el panel de admin; se omite su sincronización.", league.key)
             return
 
+        cutoff = datetime.now(timezone.utc) - NBA_ROSTER_STALE_AFTER
         teams_to_sync = (
             db.query(Team)
             .filter(Team.league_id == league.id)
+            .filter((Team.roster_synced_at.is_(None)) | (Team.roster_synced_at < cutoff))
             .order_by(Team.roster_synced_at.asc().nullsfirst())
             .limit(NBA_ROSTER_SYNC_BATCH_SIZE)
             .all()
