@@ -1,31 +1,42 @@
 /* =========================================================================
    BFB DEPORTES — Sistema de diseño
-   Concepto: marcador electrónico de estadio (scoreboard). Fondo negro,
-   acentos en amarillo intenso, tipografía condensada para titulares y
-   monoespaciada para marcadores/estadísticas, como un tablero LED.
+   Concepto: marcador electrónico de estadio bajo las luces nocturnas.
+   Fondo negro con resplandores de reflector, acentos en amarillo intenso,
+   tipografía condensada para titulares y monoespaciada para marcadores/
+   estadísticas, como un tablero LED. Tarjetas con profundidad real
+   (sombra + veta de luz superior) en vez de superficies planas.
    ========================================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;700&display=swap');
 
 :root {
   /* Paleta: amarillo y negro como colores principales, con neutros de apoyo */
-  --bfb-black: #0b0b0c;
-  --bfb-surface: #1a1a1d;
-  --bfb-surface-alt: #232326;
+  --bfb-black: #0a0a0c;
+  --bfb-black-deep: #050506;
+  --bfb-surface: #1a1a1e;
+  --bfb-surface-alt: #232327;
   --bfb-yellow: #ffc400;
+  --bfb-yellow-bright: #ffd94d;
   --bfb-yellow-dim: #8a6c00;
+  --bfb-yellow-glow: rgba(255, 196, 0, 0.16);
   --bfb-white: #f5f3ee;
   --bfb-muted: #9a9a9e;
   --bfb-live: #2ecc71;
   --bfb-loss: #e2564f;
-  --bfb-border: #2c2c30;
+  --bfb-border: #2c2c31;
+  --bfb-border-bright: #3d3d43;
 
   --font-display: 'Anton', 'Arial Narrow', sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
   --font-mono: 'Roboto Mono', 'Courier New', monospace;
 
-  --radius: 6px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
   --shadow-yellow: 0 0 0 1px rgba(255, 196, 0, 0.15);
+  --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-card-hover: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --surface-gradient: linear-gradient(165deg, #1f1f23 0%, #17171a 100%);
 }
 
 * {
@@ -38,7 +49,11 @@ html {
 
 body {
   margin: 0;
-  background: var(--bfb-black);
+  background:
+    radial-gradient(ellipse 900px 460px at 15% -8%, rgba(255, 196, 0, 0.10), transparent 60%),
+    radial-gradient(ellipse 700px 420px at 100% 0%, rgba(46, 204, 113, 0.05), transparent 55%),
+    var(--bfb-black);
+  background-attachment: fixed, fixed, fixed;
   color: var(--bfb-white);
   font-family: var(--font-body);
   line-height: 1.5;
@@ -78,11 +93,11 @@ button, input, select {
   font-family: var(--font-body);
   font-weight: 700;
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: 10px 18px;
   cursor: pointer;
   font-size: 14px;
-  transition: transform 0.12s ease, background 0.12s ease;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .btn:active {
@@ -90,12 +105,14 @@ button, input, select {
 }
 
 .btn-primary {
-  background: var(--bfb-yellow);
+  background: linear-gradient(180deg, var(--bfb-yellow-bright), var(--bfb-yellow));
   color: var(--bfb-black);
+  box-shadow: 0 4px 14px rgba(255, 196, 0, 0.25);
 }
 
 .btn-primary:hover {
-  background: #ffd23f;
+  background: linear-gradient(180deg, #ffe066, var(--bfb-yellow-bright));
+  box-shadow: 0 6px 18px rgba(255, 196, 0, 0.35);
 }
 
 .btn-outline {
@@ -106,12 +123,17 @@ button, input, select {
 
 .btn-outline:hover {
   border-color: var(--bfb-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 196, 0, 0.08);
 }
 
 .btn-ghost {
   background: transparent;
   color: var(--bfb-white);
   border: 1px solid var(--bfb-border);
+}
+
+.btn-ghost:hover {
+  border-color: var(--bfb-border-bright);
 }
 
 .btn-small {
@@ -121,26 +143,30 @@ button, input, select {
 
 /* ---------- Barra superior de utilidades ---------- */
 .topbar {
-  background: var(--bfb-black);
+  background: rgba(10, 10, 12, 0.85);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--bfb-border);
   font-size: 13px;
+  position: sticky;
+  top: 0;
+  z-index: 80;
 }
 
 .topbar .container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 40px;
-  padding: 6px 0;
+  min-height: 44px;
+  padding: 7px 20px;
   gap: 8px;
 }
 
 .lang-select {
-  background: transparent;
+  background: var(--bfb-surface);
   color: var(--bfb-white);
   border: 1px solid var(--bfb-border);
-  border-radius: var(--radius);
-  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
   font-size: 12px;
   flex-shrink: 0;
 }
@@ -176,12 +202,17 @@ button, input, select {
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  background: transparent;
+  background: var(--bfb-surface);
   border: 1px solid var(--bfb-border);
-  border-radius: var(--radius);
-  padding: 4px 8px;
+  border-radius: 999px;
+  padding: 4px 10px 4px 4px;
   color: var(--bfb-white);
   cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.account-menu-toggle:hover {
+  border-color: var(--bfb-border-bright);
 }
 
 .account-username {
@@ -199,15 +230,15 @@ button, input, select {
 
 .account-menu-dropdown {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   right: 0;
-  background: var(--bfb-black);
-  border: 1px solid var(--bfb-border);
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border-bright);
   border-radius: var(--radius);
   min-width: 170px;
   overflow: hidden;
   z-index: 60;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .account-menu-item {
@@ -218,9 +249,10 @@ button, input, select {
   border: none;
   border-bottom: 1px solid var(--bfb-border);
   color: var(--bfb-white);
-  padding: 10px 14px;
+  padding: 11px 14px;
   font-size: 13px;
   cursor: pointer;
+  transition: background 0.12s ease;
 }
 
 .account-menu-item:last-child {
@@ -228,13 +260,32 @@ button, input, select {
 }
 
 .account-menu-item:hover {
-  background: var(--bfb-surface);
+  background: rgba(255, 196, 0, 0.08);
+  color: var(--bfb-yellow);
 }
 
 /* ---------- Cabecera / marca ---------- */
 .header {
-  padding: 28px 0 0;
+  position: relative;
+  padding: 40px 0 0;
   border-bottom: 1px solid var(--bfb-border);
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -180px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 720px;
+  height: 360px;
+  background: radial-gradient(ellipse at center, rgba(255, 196, 0, 0.16), transparent 70%);
+  pointer-events: none;
+}
+
+.header .container {
+  position: relative;
 }
 
 .brand-row {
@@ -243,15 +294,16 @@ button, input, select {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 22px;
+  margin-bottom: 26px;
 }
 
 .brand h1 {
   font-family: var(--font-display);
-  font-size: clamp(32px, 6vw, 52px);
+  font-size: clamp(34px, 6.5vw, 56px);
   letter-spacing: 0.02em;
   margin: 0;
   color: var(--bfb-white);
+  text-shadow: 0 2px 24px rgba(255, 196, 0, 0.12);
 }
 
 .brand h1 span {
@@ -261,9 +313,29 @@ button, input, select {
 .brand p.tagline {
   font-family: var(--font-mono);
   color: var(--bfb-muted);
-  margin: 4px 0 0;
+  margin: 8px 0 0;
   font-size: 13px;
   letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand p.tagline::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bfb-live);
+  box-shadow: 0 0 8px var(--bfb-live);
+  animation: pulse-dot 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.85); }
 }
 
 /* Tabs de deporte, con esquina cortada tipo señalética de estadio */
@@ -282,25 +354,29 @@ button, input, select {
   color: var(--bfb-muted);
   border: 1px solid var(--bfb-border);
   border-bottom: none;
-  padding: 12px 22px 10px;
+  padding: 13px 24px 11px;
   cursor: pointer;
   clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%);
+  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
 .sport-tab:hover {
   color: var(--bfb-white);
+  transform: translateY(-2px);
 }
 
 .sport-tab.active {
-  background: var(--bfb-yellow);
+  background: linear-gradient(180deg, var(--bfb-yellow-bright), var(--bfb-yellow));
   color: var(--bfb-black);
+  transform: translateY(-2px);
+  box-shadow: 0 -6px 20px rgba(255, 196, 0, 0.25);
 }
 
 .league-select-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--bfb-border);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -313,12 +389,13 @@ button, input, select {
   background: var(--bfb-surface);
   color: var(--bfb-white);
   border: 1px solid var(--bfb-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: 6px 10px;
   font-family: var(--font-body);
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
+  transition: border-color 0.15s ease;
 }
 
 .league-select:focus {
@@ -327,11 +404,19 @@ button, input, select {
 
 /* ---------- Ticker en vivo (elemento distintivo) ---------- */
 .live-ticker {
-  background: #000;
+  background: linear-gradient(180deg, #000, #0a0a0c);
   border-bottom: 1px solid var(--bfb-border);
   overflow: hidden;
   white-space: nowrap;
   position: relative;
+}
+
+.live-ticker::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--bfb-black) 0%, transparent 4%, transparent 96%, var(--bfb-black) 100%);
+  pointer-events: none;
 }
 
 .live-ticker-track {
@@ -390,18 +475,20 @@ button, input, select {
 
 /* ---------- Layout de secciones ---------- */
 .section {
-  padding: 36px 0;
+  padding: 44px 0;
   border-bottom: 1px solid var(--bfb-border);
 }
 
 .section-title {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 23px;
   letter-spacing: 0.02em;
-  margin: 0 0 16px;
+  margin: 0 0 20px;
   display: flex;
   align-items: baseline;
   gap: 10px;
+  padding-left: 14px;
+  border-left: 4px solid var(--bfb-yellow);
 }
 
 .section-title small {
@@ -428,7 +515,7 @@ button, input, select {
   color: var(--bfb-yellow);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  margin: 18px 0 6px;
+  margin: 22px 0 8px;
 }
 
 .standings-group-title:first-child {
@@ -437,29 +524,44 @@ button, input, select {
 
 .standings-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-family: var(--font-mono);
   font-size: 13px;
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
 .standings-table th {
   text-align: left;
   color: var(--bfb-yellow);
   font-weight: 700;
-  padding: 8px 10px;
-  border-bottom: 2px solid var(--bfb-yellow-dim);
+  padding: 11px 14px;
+  background: rgba(255, 196, 0, 0.06);
+  border-bottom: 1px solid var(--bfb-yellow-dim);
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: 0.06em;
 }
 
 .standings-table td {
-  padding: 9px 10px;
+  padding: 11px 14px;
   border-bottom: 1px solid var(--bfb-border);
 }
 
-.standings-table tr:nth-child(odd) td {
-  background: var(--bfb-surface);
+.standings-table tr:last-child td {
+  border-bottom: none;
+}
+
+.standings-table tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.standings-table tr:hover td {
+  background: rgba(255, 196, 0, 0.04);
 }
 
 .team-cell {
@@ -483,6 +585,11 @@ button, input, select {
   color: var(--bfb-muted);
   font-size: 15px;
   padding: 0 4px;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.fav-star:hover {
+  transform: scale(1.15);
 }
 
 .fav-star.active {
@@ -491,21 +598,27 @@ button, input, select {
 
 /* ---------- Tarjetas (jugadores hoy / noticias) ---------- */
 .card {
-  background: var(--bfb-surface);
+  background: var(--surface-gradient);
   border: 1px solid var(--bfb-border);
   border-radius: var(--radius);
   overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
 .card-body {
-  padding: 14px 16px;
+  padding: 16px 18px;
 }
 
 .player-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 14px 16px;
+  transition: background 0.15s ease;
+}
+
+.player-card:hover {
+  background: rgba(255, 196, 0, 0.04);
 }
 
 .player-card img {
@@ -514,6 +627,7 @@ button, input, select {
   border-radius: 50%;
   object-fit: cover;
   background: var(--bfb-surface-alt);
+  border: 2px solid var(--bfb-border);
 }
 
 .player-card .name {
@@ -525,6 +639,21 @@ button, input, select {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--bfb-muted);
+}
+
+.news-card {
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.news-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--bfb-border-bright);
 }
 
 .news-card img {
@@ -559,18 +688,25 @@ button, input, select {
 
 /* ---------- Partidos: marcador estilo LED ---------- */
 .game-card {
-  background: var(--bfb-surface);
+  background: var(--surface-gradient);
   border: 1px solid var(--bfb-border);
   border-radius: var(--radius);
-  padding: 16px 18px;
-  margin-bottom: 12px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.game-card:hover {
+  border-color: var(--bfb-border-bright);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .game-top-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .game-status {
@@ -584,7 +720,10 @@ button, input, select {
   gap: 6px;
 }
 
-.game-status.live { color: var(--bfb-live); }
+.game-status.live {
+  color: var(--bfb-live);
+  text-shadow: 0 0 8px rgba(46, 204, 113, 0.5);
+}
 
 .scoreboard-row {
   display: grid;
@@ -614,28 +753,33 @@ button, input, select {
 
 .score-led {
   font-family: var(--font-mono);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--bfb-yellow);
-  text-shadow: 0 0 8px rgba(255, 196, 0, 0.35);
-  min-width: 90px;
+  text-shadow: 0 0 10px rgba(255, 196, 0, 0.45);
+  min-width: 100px;
   text-align: center;
   letter-spacing: 0.05em;
+  background: var(--bfb-black-deep);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  box-shadow: inset 0 0 16px rgba(255, 196, 0, 0.06);
 }
 
 .game-details-box {
-  margin-top: 10px;
+  margin-top: 12px;
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--bfb-muted);
   border-top: 1px dashed var(--bfb-border);
-  padding-top: 10px;
+  padding-top: 12px;
 }
 
 /* ---------- Situación en vivo de béisbol (diamante, outs, última jugada) ---------- */
 .live-situation {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
   border-top: 1px dashed var(--bfb-border);
   display: flex;
   gap: 20px;
@@ -663,12 +807,13 @@ button, input, select {
   background: var(--bfb-surface-alt);
   border: 2px solid var(--bfb-muted);
   transform: rotate(45deg);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .diamond-base.occupied {
   background: var(--bfb-yellow);
   border-color: var(--bfb-yellow);
-  box-shadow: 0 0 6px rgba(255, 196, 0, 0.6);
+  box-shadow: 0 0 8px rgba(255, 196, 0, 0.7);
 }
 
 /* Home siempre "vacía" visualmente: es referencia, no una base a ocupar */
@@ -720,25 +865,26 @@ button, input, select {
 
 /* ---------- Barra de probabilidad + predicción ---------- */
 .probability-wrap {
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .probability-bar {
-  height: 10px;
+  height: 12px;
   border-radius: 999px;
   overflow: hidden;
   display: flex;
   background: var(--bfb-surface-alt);
   border: 1px solid var(--bfb-border);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .probability-fill-home {
-  background: var(--bfb-yellow);
+  background: linear-gradient(90deg, var(--bfb-yellow-dim), var(--bfb-yellow));
   height: 100%;
 }
 
 .probability-fill-away {
-  background: var(--bfb-border);
+  background: var(--bfb-border-bright);
   height: 100%;
 }
 
@@ -748,13 +894,13 @@ button, input, select {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--bfb-muted);
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .predict-row {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 14px;
   flex-wrap: wrap;
 }
 
@@ -764,21 +910,23 @@ button, input, select {
   background: var(--bfb-surface-alt);
   border: 1px solid var(--bfb-border);
   color: var(--bfb-white);
-  border-radius: var(--radius);
-  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
   font-size: 12px;
   cursor: pointer;
   text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
 .predict-btn:hover {
   border-color: var(--bfb-yellow);
+  transform: translateY(-1px);
 }
 
 .predict-btn .points-tag {
   display: block;
   font-family: var(--font-mono);
-  margin-top: 3px;
+  margin-top: 4px;
   font-size: 11px;
 }
 
@@ -792,14 +940,16 @@ button, input, select {
 
 .predict-btn.chosen {
   border-color: var(--bfb-yellow);
-  background: rgba(255, 196, 0, 0.08);
+  background: rgba(255, 196, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 196, 0, 0.08);
 }
 
 /* ---------- Modal de autenticación ---------- */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(5, 5, 6, 0.75);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -808,13 +958,14 @@ button, input, select {
 }
 
 .modal {
-  background: var(--bfb-surface);
-  border: 1px solid var(--bfb-border);
-  border-radius: var(--radius);
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border-bright);
+  border-radius: var(--radius-lg);
   width: 100%;
   max-width: 380px;
-  padding: 26px;
+  padding: 28px;
   position: relative;
+  box-shadow: var(--shadow-card-hover);
 }
 
 .modal h2 {
@@ -842,16 +993,18 @@ button, input, select {
 
 .field input {
   width: 100%;
-  background: var(--bfb-black);
+  background: var(--bfb-black-deep);
   border: 1px solid var(--bfb-border);
   color: var(--bfb-white);
-  border-radius: var(--radius);
-  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  padding: 11px 12px;
   font-size: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .field input:focus {
   border-color: var(--bfb-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 196, 0, 0.1);
 }
 
 .form-error {
@@ -893,6 +1046,11 @@ button, input, select {
   color: var(--bfb-muted);
   font-size: 20px;
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.modal-close:hover {
+  color: var(--bfb-white);
 }
 
 /* ---------- Estadísticas ---------- */
@@ -907,7 +1065,7 @@ button, input, select {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   font-size: 13px;
   color: var(--bfb-muted);
   flex-wrap: wrap;
@@ -917,10 +1075,11 @@ button, input, select {
   background: var(--bfb-surface);
   border: 1px solid var(--bfb-border);
   color: var(--bfb-white);
-  border-radius: var(--radius);
-  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
   font-family: var(--font-body);
   font-size: 13px;
+  transition: border-color 0.15s ease;
 }
 
 .date-search-row input[type="date"]:focus {
@@ -931,8 +1090,8 @@ button, input, select {
   background: var(--bfb-surface);
   border: 1px solid var(--bfb-border);
   color: var(--bfb-white);
-  border-radius: var(--radius);
-  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
   font-size: 13px;
 }
 
@@ -947,27 +1106,30 @@ button, input, select {
   background: var(--bfb-surface);
   border: 1px solid var(--bfb-border);
   color: var(--bfb-white);
-  border-radius: var(--radius);
-  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
   font-size: 13px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .stats-autocomplete-wrap input:focus {
   border-color: var(--bfb-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 196, 0, 0.1);
 }
 
 .stats-suggestions {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
-  background: var(--bfb-surface-alt);
-  border: 1px solid var(--bfb-border);
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border-bright);
   border-radius: var(--radius);
   overflow: hidden;
   z-index: 20;
   max-height: 260px;
   overflow-y: auto;
+  box-shadow: var(--shadow-card-hover);
 }
 
 .stats-suggestion-item {
@@ -975,7 +1137,7 @@ button, input, select {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   background: none;
   border: none;
   border-bottom: 1px solid var(--bfb-border);
@@ -983,6 +1145,7 @@ button, input, select {
   font-size: 13px;
   cursor: pointer;
   text-align: left;
+  transition: background 0.12s ease;
 }
 
 .stats-suggestion-item:hover {
@@ -1013,7 +1176,7 @@ button, input, select {
   gap: 8px;
   font-size: 13px;
   color: var(--bfb-muted);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   cursor: pointer;
 }
 
@@ -1021,7 +1184,7 @@ button, input, select {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--bfb-yellow);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .compare-header-row {
@@ -1029,7 +1192,7 @@ button, input, select {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .compare-header-side {
@@ -1058,13 +1221,13 @@ button, input, select {
 .compare-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   font-family: var(--font-mono);
   font-size: 13px;
 }
 
 .compare-table td {
-  padding: 7px 6px;
+  padding: 8px 6px;
   border-bottom: 1px solid var(--bfb-border);
 }
 
@@ -1088,17 +1251,18 @@ button, input, select {
 }
 
 .stats-card {
-  background: var(--bfb-surface);
+  background: var(--surface-gradient);
   border: 1px solid var(--bfb-border);
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 20px;
+  box-shadow: var(--shadow-card);
 }
 
 .stats-card-header {
   display: flex;
   align-items: center;
   gap: 14px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 .stats-card-header img {
@@ -1121,12 +1285,12 @@ button, input, select {
 .stats-record-row {
   display: flex;
   gap: 24px;
-  padding: 14px 0;
+  padding: 16px 0;
   border-top: 1px solid var(--bfb-border);
   border-bottom: 1px solid var(--bfb-border);
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   flex-wrap: wrap;
-  row-gap: 12px;
+  row-gap: 14px;
 }
 
 .stats-record-row div {
@@ -1136,7 +1300,7 @@ button, input, select {
 
 .stats-record-row strong {
   font-family: var(--font-mono);
-  font-size: 20px;
+  font-size: 21px;
   color: var(--bfb-yellow);
 }
 
@@ -1159,7 +1323,7 @@ button, input, select {
   grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 12px;
-  padding: 8px 0;
+  padding: 9px 0;
   border-bottom: 1px solid var(--bfb-border);
   font-size: 13px;
 }
@@ -1179,7 +1343,7 @@ button, input, select {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .outcome-tag.win {
@@ -1194,23 +1358,25 @@ button, input, select {
 
 /* ---------- Estado vacío / próximamente ---------- */
 .empty-state {
-  border: 1px dashed var(--bfb-border);
+  border: 1px dashed var(--bfb-border-bright);
   border-radius: var(--radius);
-  padding: 28px;
+  padding: 32px;
   text-align: center;
   color: var(--bfb-muted);
   font-size: 13px;
+  background: rgba(255, 255, 255, 0.015);
 }
 
 /* ---------- Footer ---------- */
 .footer {
-  padding: 30px 0 50px;
+  padding: 34px 0 56px;
   font-size: 12px;
   color: var(--bfb-muted);
   display: flex;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px;
+  background: linear-gradient(180deg, transparent, rgba(255, 196, 0, 0.03));
 }
 
 .footer .bfb-word {
@@ -1248,10 +1414,11 @@ button, input, select {
 #admin-panel {
   margin: 16px auto;
   max-width: 640px;
-  background: var(--bfb-black);
-  border: 1px solid var(--bfb-border);
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border-bright);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow-card);
 }
 
 .admin-controls {
@@ -1284,13 +1451,13 @@ button, input, select {
 }
 
 .toast {
-  padding: 12px 16px;
+  padding: 13px 18px;
   border-radius: var(--radius);
   font-size: 13px;
   color: var(--bfb-white);
-  background: var(--bfb-black);
-  border: 1px solid var(--bfb-border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border-bright);
+  box-shadow: var(--shadow-card-hover);
   opacity: 0;
   transform: translateY(-8px);
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -1376,11 +1543,11 @@ button, input, select {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: var(--bfb-black);
+  background: var(--surface-gradient);
   border: 1px solid var(--bfb-yellow-dim);
   border-radius: 999px;
   padding: 4px 6px 4px 4px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .install-app-action {
