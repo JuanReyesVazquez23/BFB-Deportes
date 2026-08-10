@@ -21,6 +21,7 @@
   --bfb-yellow-glow: rgba(255, 196, 0, 0.16);
   --bfb-white: #f5f3ee;
   --bfb-muted: #9a9a9e;
+  --bfb-live: #2ecc71;
   --bfb-loss: #e2564f;
   --bfb-border: #2c2c31;
   --bfb-border-bright: #3d3d43;
@@ -315,14 +316,6 @@ button, input, select {
   margin: 8px 0 0;
   font-size: 13px;
   letter-spacing: 0.03em;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.55; transform: scale(0.85); }
 }
 
 /* Tabs de deporte, con esquina cortada tipo señalética de estadio */
