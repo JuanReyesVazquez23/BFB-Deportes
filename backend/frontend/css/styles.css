@@ -21,7 +21,6 @@
   --bfb-yellow-glow: rgba(255, 196, 0, 0.16);
   --bfb-white: #f5f3ee;
   --bfb-muted: #9a9a9e;
-  --bfb-live: #2ecc71;
   --bfb-loss: #e2564f;
   --bfb-border: #2c2c31;
   --bfb-border-bright: #3d3d43;
@@ -319,18 +318,6 @@ button, input, select {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.brand p.tagline::before {
-  content: '';
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--bfb-live);
-  box-shadow: 0 0 8px var(--bfb-live);
-  animation: pulse-dot 2s ease-in-out infinite;
-  flex-shrink: 0;
 }
 
 @keyframes pulse-dot {
