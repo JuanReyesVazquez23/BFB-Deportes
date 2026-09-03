@@ -1234,17 +1234,17 @@ def resolve_finished_predictions() -> None:
             .filter(Prediction.status == "pending", Game.status == "final")
             .all()
         )
+        resolved_count = 0
         for prediction in pending:
             game = prediction.game
-            winner_team_id = None
-            if game.home_score is not None and game.away_score is not None:
-                if game.home_score > game.away_score:
-                    winner_team_id = game.home_team_id
-                elif game.away_score > game.home_score:
-                    winner_team_id = game.away_team_id
+            if game.home_score is None or game.away_score is None:
+                continue
 
-            if winner_team_id is None:
-                continue  # empate u datos incompletos: se deja pendiente
+            winner_team_id = None
+            if game.home_score > game.away_score:
+                winner_team_id = game.home_team_id
+            elif game.away_score > game.home_score:
+                winner_team_id = game.away_team_id
 
             user = db.get(User, prediction.user_id)
             if prediction.predicted_team_id == winner_team_id:
@@ -1260,9 +1260,10 @@ def resolve_finished_predictions() -> None:
 
             prediction.resolved_at = datetime.now(timezone.utc)
             prediction.seen = False  # hay un resultado nuevo: el frontend debe avisarle al usuario
+            resolved_count += 1
 
         db.commit()
-        logger.info("Predicciones resueltas: %d", len(pending))
+        logger.info("Predicciones resueltas: %d", resolved_count)
     finally:
         db.close()
 
