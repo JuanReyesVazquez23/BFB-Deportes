@@ -57,7 +57,7 @@ function renderPredictionHistoryRow(p) {
   const matchup = formatMatchup(p);
   const game = p.game;
   const score = game && game.status === 'final' ? `${game.away_score} - ${game.home_score}` : '';
-  const canDelete = p.status !== 'pending';
+  const canDelete = true;
 
   let pointsTag = '';
   if (p.status === 'correct') {

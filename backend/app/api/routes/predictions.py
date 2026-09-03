@@ -99,13 +99,9 @@ def delete_prediction(
     db: Session = Depends(get_db),
 ):
     """
-    Borra una predicción del historial del usuario (solo para ordenar su
-    propia vista, los puntos ya otorgados/restados NO se revierten).
-
-    Solo se permite si ya está resuelta (correct/incorrect). Una pendiente
-    NO se puede borrar: si se permitiera, alguien podría borrar su
-    predicción justo cuando ve que va perdiendo, para esquivar la
-    penalización antes de que el partido termine.
+    Borra una predicción del historial del propio usuario. Se permite tanto
+    mientras está pendiente como después de resolverse. Si ya tuvo resultado,
+    los puntos otorgados o restados no se revierten.
     """
     prediction = (
         db.query(Prediction)
@@ -114,11 +110,6 @@ def delete_prediction(
     )
     if not prediction:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Predicción no encontrada.")
-    if prediction.status == "pending":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No puedes borrar una predicción todavía pendiente.",
-        )
     db.delete(prediction)
     db.commit()
     return None
