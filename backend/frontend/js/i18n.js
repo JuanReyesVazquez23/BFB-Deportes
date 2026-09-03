@@ -9,8 +9,10 @@ const i18nState = {
   dict: {},
 };
 
+const I18N_VERSION = '20260903-2';
+
 async function loadDictionary(lang) {
-  const res = await fetch(`i18n/${lang}.json`);
+  const res = await fetch(`i18n/${lang}.json?v=${I18N_VERSION}`);
   return res.json();
 }
 
@@ -25,10 +27,14 @@ function t(key) {
 
 function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach((el) => {
-    el.textContent = t(el.dataset.i18n);
+    const translated = t(el.dataset.i18n);
+    // Si una versión anterior del diccionario sigue en caché, conserva el
+    // texto escrito en HTML en lugar de mostrar la clave técnica (ej. header.kicker).
+    if (translated !== el.dataset.i18n) el.textContent = translated;
   });
   document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
-    el.placeholder = t(el.dataset.i18nPlaceholder);
+    const translated = t(el.dataset.i18nPlaceholder);
+    if (translated !== el.dataset.i18nPlaceholder) el.placeholder = translated;
   });
   document.documentElement.lang = i18nState.lang;
 }
