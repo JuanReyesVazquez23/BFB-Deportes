@@ -35,14 +35,6 @@
   text-transform: uppercase;
 }
 
-.topbar-signal {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: var(--bfb-live);
-  box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.1), 0 0 10px rgba(46, 204, 113, 0.55);
-}
 
 .topbar-actions {
   flex: 0 0 auto;
