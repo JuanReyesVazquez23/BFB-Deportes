@@ -1,5 +1,20 @@
 {
   "tagline": "Béisbol · Fútbol · Basketball — todo en un mismo lugar",
+  "header": {
+    "liveDesk": "Centro de datos deportivos",
+    "kicker": "Tu tablero deportivo",
+    "summaryLabel": "Todo el juego, en un lugar",
+    "summaryTitle": "Sigue la acción sin perder el ritmo",
+    "summaryText": "Resultados, noticias y estadísticas de las ligas que importan.",
+    "liveScores": "Marcadores y calendario",
+    "liveScoresDetail": "Partidos y resultados actualizados",
+    "insights": "Datos para seguir el juego",
+    "insightsDetail": "Equipos, jugadores y posiciones",
+    "predictions": "Pon tu pronóstico",
+    "predictionsDetail": "Convierte tus lecturas en puntos BFB",
+    "chooseSport": "Explora por deporte",
+    "chooseSportDetail": "Selecciona una liga para ver la jornada."
+  },
   "nav": {
     "baseball": "Béisbol",
     "football": "Fútbol",

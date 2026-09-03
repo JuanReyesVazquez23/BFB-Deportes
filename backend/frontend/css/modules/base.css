@@ -1,0 +1,143 @@
+/* =========================================================================
+   BFB DEPORTES — Sistema de diseño
+   Concepto: marcador electrónico de estadio bajo las luces nocturnas.
+   Fondo negro con resplandores de reflector, acentos en amarillo intenso,
+   tipografía condensada para titulares y monoespaciada para marcadores/
+   estadísticas, como un tablero LED. Tarjetas con profundidad real
+   (sombra + veta de luz superior) en vez de superficies planas.
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@400;500;700&display=swap');
+
+:root {
+  /* Paleta: amarillo y negro como colores principales, con neutros de apoyo */
+  --bfb-black: #0a0a0c;
+  --bfb-black-deep: #050506;
+  --bfb-surface: #1a1a1e;
+  --bfb-surface-alt: #232327;
+  --bfb-yellow: #ffc400;
+  --bfb-yellow-bright: #ffd94d;
+  --bfb-yellow-dim: #8a6c00;
+  --bfb-yellow-glow: rgba(255, 196, 0, 0.16);
+  --bfb-white: #f5f3ee;
+  --bfb-muted: #9a9a9e;
+  --bfb-live: #2ecc71;
+  --bfb-loss: #e2564f;
+  --bfb-border: #2c2c31;
+  --bfb-border-bright: #3d3d43;
+
+  --font-display: 'Anton', 'Arial Narrow', sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Roboto Mono', 'Courier New', monospace;
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 20px;
+  --shadow-yellow: 0 0 0 1px rgba(255, 196, 0, 0.15);
+  --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-card-hover: 0 16px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --surface-gradient: linear-gradient(165deg, #1f1f23 0%, #17171a 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(ellipse 900px 460px at 15% -8%, rgba(255, 196, 0, 0.10), transparent 60%),
+    radial-gradient(ellipse 700px 420px at 100% 0%, rgba(46, 204, 113, 0.05), transparent 55%),
+    var(--bfb-black);
+  background-attachment: fixed, fixed, fixed;
+  color: var(--bfb-white);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+button, input, select {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--bfb-yellow);
+  outline-offset: 2px;
+}
+
+/* ---------- Utilidades ---------- */
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.btn {
+  font-family: var(--font-body);
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, var(--bfb-yellow-bright), var(--bfb-yellow));
+  color: var(--bfb-black);
+  box-shadow: 0 4px 14px rgba(255, 196, 0, 0.25);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(180deg, #ffe066, var(--bfb-yellow-bright));
+  box-shadow: 0 6px 18px rgba(255, 196, 0, 0.35);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--bfb-yellow);
+  border: 1.5px solid var(--bfb-yellow-dim);
+}
+
+.btn-outline:hover {
+  border-color: var(--bfb-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 196, 0, 0.08);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--bfb-white);
+  border: 1px solid var(--bfb-border);
+}
+
+.btn-ghost:hover {
+  border-color: var(--bfb-border-bright);
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+

@@ -1,0 +1,471 @@
+/* ---------- Layout de secciones ---------- */
+.section {
+  padding: 44px 0;
+  border-bottom: 1px solid var(--bfb-border);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 23px;
+  letter-spacing: 0.02em;
+  margin: 0 0 20px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-left: 14px;
+  border-left: 4px solid var(--bfb-yellow);
+}
+
+.section-title small {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--bfb-muted);
+  font-weight: 400;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .grid-3 { grid-template-columns: 1fr; }
+}
+
+/* ---------- Tabla de posiciones ---------- */
+.standings-group-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--bfb-yellow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 22px 0 8px;
+}
+
+.standings-group-title:first-child {
+  margin-top: 0;
+}
+
+.standings-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.standings-table th {
+  text-align: left;
+  color: var(--bfb-yellow);
+  font-weight: 700;
+  padding: 11px 14px;
+  background: rgba(255, 196, 0, 0.06);
+  border-bottom: 1px solid var(--bfb-yellow-dim);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.standings-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--bfb-border);
+}
+
+.standings-table tr:last-child td {
+  border-bottom: none;
+}
+
+.standings-table tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.standings-table tr:hover td {
+  background: rgba(255, 196, 0, 0.04);
+}
+
+.team-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+
+.team-cell img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.fav-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--bfb-muted);
+  font-size: 15px;
+  padding: 0 4px;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.fav-star:hover {
+  transform: scale(1.15);
+}
+
+.fav-star.active {
+  color: var(--bfb-yellow);
+}
+
+/* ---------- Tarjetas (jugadores hoy / noticias) ---------- */
+.card {
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.card-body {
+  padding: 16px 18px;
+}
+
+.player-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  transition: background 0.15s ease;
+}
+
+.player-card:hover {
+  background: rgba(255, 196, 0, 0.04);
+}
+
+.player-card img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bfb-surface-alt);
+  border: 2px solid var(--bfb-border);
+}
+
+.player-card .name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.player-card .role {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--bfb-muted);
+}
+
+.news-card {
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.news-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--bfb-border-bright);
+}
+
+.news-card img {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  background: var(--bfb-surface-alt);
+}
+
+.news-card .card-body h3 {
+  font-size: 15px;
+  margin: 0 0 6px;
+  line-height: 1.35;
+}
+
+.news-card .card-body p {
+  font-size: 13px;
+  color: var(--bfb-muted);
+  margin: 0 0 10px;
+}
+
+.news-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--bfb-yellow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- Partidos: marcador estilo LED ---------- */
+.game-card {
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.game-card:hover {
+  border-color: var(--bfb-border-bright);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.game-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.game-status {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bfb-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.game-status.live {
+  color: var(--bfb-live);
+  text-shadow: 0 0 8px rgba(46, 204, 113, 0.5);
+}
+
+.scoreboard-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+}
+
+.team-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-block.away { justify-content: flex-end; text-align: right; flex-direction: row-reverse; }
+
+.team-block img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.team-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.score-led {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--bfb-yellow);
+  text-shadow: 0 0 10px rgba(255, 196, 0, 0.45);
+  min-width: 100px;
+  text-align: center;
+  letter-spacing: 0.05em;
+  background: var(--bfb-black-deep);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  box-shadow: inset 0 0 16px rgba(255, 196, 0, 0.06);
+}
+
+.game-details-box {
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--bfb-muted);
+  border-top: 1px dashed var(--bfb-border);
+  padding-top: 12px;
+}
+
+/* ---------- Situación en vivo de béisbol (diamante, outs, última jugada) ---------- */
+.live-situation {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--bfb-border);
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.diamond-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.diamond {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.diamond-base {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--bfb-surface-alt);
+  border: 2px solid var(--bfb-muted);
+  transform: rotate(45deg);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.diamond-base.occupied {
+  background: var(--bfb-yellow);
+  border-color: var(--bfb-yellow);
+  box-shadow: 0 0 8px rgba(255, 196, 0, 0.7);
+}
+
+/* Home siempre "vacía" visualmente: es referencia, no una base a ocupar */
+.diamond-base.second { top: 0; left: 24px; }
+.diamond-base.first { top: 24px; left: 48px; }
+.diamond-base.third { top: 24px; left: 0; }
+.diamond-base.home { top: 48px; left: 24px; background: transparent; border-color: var(--bfb-border); }
+
+.outs-row {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--bfb-muted);
+}
+
+.out-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bfb-surface-alt);
+  border: 1px solid var(--bfb-border);
+}
+
+.out-dot.filled {
+  background: var(--bfb-loss);
+  border-color: var(--bfb-loss);
+}
+
+.live-situation-info {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--bfb-white);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.live-situation-info .count {
+  color: var(--bfb-yellow);
+}
+
+.live-situation-info .last-play {
+  color: var(--bfb-muted);
+  font-style: italic;
+}
+
+/* ---------- Barra de probabilidad + predicción ---------- */
+.probability-wrap {
+  margin-top: 16px;
+}
+
+.probability-bar {
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  background: var(--bfb-surface-alt);
+  border: 1px solid var(--bfb-border);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.probability-fill-home {
+  background: linear-gradient(90deg, var(--bfb-yellow-dim), var(--bfb-yellow));
+  height: 100%;
+}
+
+.probability-fill-away {
+  background: var(--bfb-border-bright);
+  height: 100%;
+}
+
+.probability-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--bfb-muted);
+  margin-top: 6px;
+}
+
+.predict-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.predict-btn {
+  flex: 1;
+  min-width: 140px;
+  background: var(--bfb-surface-alt);
+  border: 1px solid var(--bfb-border);
+  color: var(--bfb-white);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.predict-btn:hover {
+  border-color: var(--bfb-yellow);
+  transform: translateY(-1px);
+}
+
+.predict-btn .points-tag {
+  display: block;
+  font-family: var(--font-mono);
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.points-tag-win {
+  color: var(--bfb-yellow);
+}
+
+.points-tag-loss {
+  color: #ff6b6b;
+}
+
+.predict-btn.chosen {
+  border-color: var(--bfb-yellow);
+  background: rgba(255, 196, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 196, 0, 0.08);
+}
+

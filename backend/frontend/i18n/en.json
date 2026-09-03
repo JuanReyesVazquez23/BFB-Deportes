@@ -1,5 +1,20 @@
 {
   "tagline": "Baseball · Football · Basketball — all in one place",
+  "header": {
+    "liveDesk": "Sports data center",
+    "kicker": "Your sports dashboard",
+    "summaryLabel": "Every game, in one place",
+    "summaryTitle": "Follow the action without missing a beat",
+    "summaryText": "Results, news, and stats from the leagues that matter.",
+    "liveScores": "Scores and schedule",
+    "liveScoresDetail": "Updated games and results",
+    "insights": "Data to follow the game",
+    "insightsDetail": "Teams, players, and standings",
+    "predictions": "Make your prediction",
+    "predictionsDetail": "Turn your reads into BFB points",
+    "chooseSport": "Explore by sport",
+    "chooseSportDetail": "Choose a league to see the matchday."
+  },
   "nav": {
     "baseball": "Baseball",
     "football": "Football",
