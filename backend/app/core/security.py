@@ -11,7 +11,7 @@ Decisiones de seguridad tomadas aquí:
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from jose import JWTError, jwt
+import jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -49,6 +49,7 @@ def decode_access_token(token: str) -> Optional[str]:
     """Devuelve el 'sub' (id de usuario) si el token es válido, o None si no lo es."""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        return payload.get("sub")
-    except JWTError:
+        sub = payload.get("sub")
+        return str(sub) if sub is not None else None
+    except jwt.PyJWTError:
         return None

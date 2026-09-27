@@ -1,9 +1,10 @@
 from datetime import date, datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from sqlalchemy.orm import Session, aliased, joinedload
 
 from app.api.deps import get_db
+from app.core.rate_limit import enforce_rate_limit
 from app.models.sport import Game, League, Team
 from app.schemas.sport import GameDetailOut, GameOut
 from app.services import mlb_service, translation_service
@@ -13,9 +14,10 @@ router = APIRouter(tags=["games"])
 
 @router.get("/leagues/{league_key}/games", response_model=list[GameOut])
 def list_games(
-    league_key: str,
+    league_key: str = Path(pattern=r"^[a-z0-9_]{1,40}$"),
     game_date: date | None = Query(default=None, description="Fecha exacta (YYYY-MM-DD). Si no se da, usa una ventana de 24h."),
-    status_filter: str | None = Query(default=None, alias="status"),
+    status_filter: str | None = Query(default=None, alias="status", pattern="^(live|final|scheduled)$"),
+    limit: int = Query(default=200, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
     league = db.query(League).filter(League.key == league_key).first()
@@ -57,11 +59,11 @@ def list_games(
     if status_filter:
         query = query.filter(Game.status == status_filter)
 
-    return query.order_by(Game.start_time.asc()).all()
+    return query.order_by(Game.start_time.asc()).limit(limit).all()
 
 
 @router.get("/games/{game_id}", response_model=GameDetailOut)
-def get_game_detail(game_id: int, db: Session = Depends(get_db)):
+def get_game_detail(game_id: int = Path(gt=0, le=2147483647), db: Session = Depends(get_db)):
     """
     Detalle completo de un juego: incluye 'details' (JSON) con información
     específica del deporte, por ejemplo en béisbol: pitcher ganador,
@@ -86,7 +88,8 @@ def get_game_detail(game_id: int, db: Session = Depends(get_db)):
 
 @router.get("/games/{game_id}/live")
 async def get_game_live_situation(
-    game_id: int,
+    request: Request,
+    game_id: int = Path(gt=0, le=2147483647),
     lang: str = Query(default="es", pattern="^(es|en)$"),
     db: Session = Depends(get_db),
 ):
@@ -114,6 +117,10 @@ async def get_game_live_situation(
 
     if game.status != "live":
         return {"status": game.status, "situation": None}
+
+    # Endpoint costoso (1 llamada externa a MLB por request + traducción):
+    # rate-limit para que un sondeo agresivo no tumbe la cuota ni el servidor.
+    enforce_rate_limit(request, bucket="games_live", limit=30, window_seconds=60)
 
     try:
         live_feed = await mlb_service.get_live_feed(int(game.external_id))

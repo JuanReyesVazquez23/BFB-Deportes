@@ -1,9 +1,9 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class FavoriteCreate(BaseModel):
     favorite_type: str  # team | player | league
-    target_id: int
+    target_id: int = Field(gt=0, le=2147483647)
 
     @field_validator("favorite_type")
     @classmethod

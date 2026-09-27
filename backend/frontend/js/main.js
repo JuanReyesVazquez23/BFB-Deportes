@@ -56,19 +56,19 @@ async function renderStandings(leagueKey) {
             <tr>
               <td>
                 <div class="team-cell">
-                  <button class="fav-star" data-fav-type="team" data-fav-id="${team.id}" aria-label="favorito">★</button>
-                  ${team.logo_url ? `<img src="${team.logo_url}" alt="">` : ''}
-                  ${team.name}
+                  <button class="fav-star" data-fav-type="team" data-fav-id="${Number(team.id)}" aria-label="favorito">★</button>
+                  ${team.logo_url ? `<img src="${esc(safeImg(team.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
+                  ${esc(team.name)}
                 </div>
               </td>
-              <td>${team.wins}</td>
-              <td>${team.losses}</td>
-              <td>${team.games_back === 0 ? '-' : team.games_back}</td>
+              <td>${Number(team.wins)}</td>
+              <td>${Number(team.losses)}</td>
+              <td>${team.games_back === 0 ? '-' : esc(team.games_back)}</td>
             </tr>`
           )
           .join('');
         return `
-          <h3 class="standings-group-title">${group.group_name}</h3>
+          <h3 class="standings-group-title">${esc(group.group_name)}</h3>
           <table class="standings-table">
             <thead>
               <tr><th>${t('stats.team')}</th><th>G</th><th>P</th><th>GB</th></tr>
@@ -106,8 +106,8 @@ async function renderPlayersToday(leagueKey) {
         return `
         <div class="player-card">
           <div>
-            <div class="name">${g.away_team.name} @ ${g.home_team.name}</div>
-            <div class="role">${t('game.probablePitcher')}: ${awayPitcher} vs ${homePitcher}</div>
+            <div class="name">${esc(g.away_team.name)} @ ${esc(g.home_team.name)}</div>
+            <div class="role">${t('game.probablePitcher')}: ${esc(awayPitcher)} vs ${esc(homePitcher)}</div>
           </div>
         </div>`;
       })
@@ -133,14 +133,14 @@ async function renderNews(sportKey) {
       .map(
         (a) => `
         <article class="card news-card">
-          ${a.image_url ? `<img src="${a.image_url}" alt="" loading="lazy">` : ''}
+          ${a.image_url ? `<img src="${esc(safeImg(a.image_url))}" alt="" loading="lazy" decoding="async">` : ''}
           <div class="card-body">
             <div class="news-meta">
-              ${t('common.source')}: ${a.source} · ${formatDate(a.published_at)}
+              ${t('common.source')}: ${esc(a.source)} · ${esc(formatDate(a.published_at))}
             </div>
-            <h3>${a.title}</h3>
-            ${a.summary ? `<p>${a.summary}</p>` : ''}
-            <a class="btn btn-outline btn-small" href="${a.article_url}" target="_blank" rel="noopener noreferrer">${t('common.readMore')}</a>
+            <h3>${esc(a.title)}</h3>
+            ${a.summary ? `<p>${esc(a.summary)}</p>` : ''}
+            <a class="btn btn-outline btn-small" href="${esc(safeUrl(a.article_url))}" target="_blank" rel="noopener noreferrer">${t('common.readMore')}</a>
           </div>
         </article>`
       )
@@ -155,7 +155,7 @@ function gameStatusLabel(game) {
   if (game.status === 'live') {
     // period_status ya lo calcula el backend (ej. "Inning 7" en MLB). Si algún
     // día no viene (otras ligas todavía sin ese dato), solo se muestra "En vivo".
-    const period = game.period_status ? ` · ${game.period_status}` : '';
+    const period = game.period_status ? ` · ${esc(game.period_status)}` : '';
     return `<span class="game-status live">● ${t('game.live')}${period}</span>`;
   }
   if (game.status === 'final') return `<span class="game-status">${t('game.final')}</span>`;
@@ -166,9 +166,9 @@ function renderGameDetailsBlock(game) {
   if (game.status !== 'final' || !game.details) return '';
   const d = game.details;
   const rows = [];
-  if (d.winning_pitcher) rows.push(`${t('game.winningPitcher')}: ${d.winning_pitcher}`);
-  if (d.losing_pitcher) rows.push(`${t('game.losingPitcher')}: ${d.losing_pitcher}`);
-  if (d.save_pitcher) rows.push(`${t('game.savePitcher')}: ${d.save_pitcher}`);
+  if (d.winning_pitcher) rows.push(`${t('game.winningPitcher')}: ${esc(d.winning_pitcher)}`);
+  if (d.losing_pitcher) rows.push(`${t('game.losingPitcher')}: ${esc(d.losing_pitcher)}`);
+  if (d.save_pitcher) rows.push(`${t('game.savePitcher')}: ${esc(d.save_pitcher)}`);
   if (!rows.length) return '';
 
   return `<div class="game-details-box">${rows.join(' · ')}</div>`;
@@ -187,15 +187,15 @@ async function renderPredictionRow(game) {
         <div class="probability-fill-away" style="width:${(awayProb * 100).toFixed(0)}%"></div>
       </div>
       <div class="probability-labels">
-        <span>${game.home_team.abbreviation || game.home_team.name} ${(homeProb * 100).toFixed(0)}%</span>
-        <span>${(awayProb * 100).toFixed(0)}% ${game.away_team.abbreviation || game.away_team.name}</span>
+        <span>${esc(game.home_team.abbreviation || game.home_team.name)} ${(homeProb * 100).toFixed(0)}%</span>
+        <span>${(awayProb * 100).toFixed(0)}% ${esc(game.away_team.abbreviation || game.away_team.name)}</span>
       </div>
     </div>`;
 
   if (!window.currentUser) {
     return `${barHtml}
       <div class="predict-row">
-        <button class="btn btn-outline btn-small" onclick="openAuthModal('login')">${t('game.loginToPredict')}</button>
+        <button class="btn btn-outline btn-small" data-open-auth="login">${t('game.loginToPredict')}</button>
       </div>`;
   }
 
@@ -206,15 +206,15 @@ async function renderPredictionRow(game) {
 
   return `${barHtml}
     <div class="predict-row">
-      <button class="predict-btn" data-game-id="${game.id}" data-team-id="${game.home_team.id}">
-        ${game.home_team.name}
-        <span class="points-tag points-tag-win">+${homePts}</span>
-        <span class="points-tag points-tag-loss">-${homeLoss} ${t('game.ifWrong')}</span>
+      <button class="predict-btn" data-game-id="${Number(game.id)}" data-team-id="${Number(game.home_team.id)}">
+        ${esc(game.home_team.name)}
+        <span class="points-tag points-tag-win">+${Number(homePts)}</span>
+        <span class="points-tag points-tag-loss">-${Number(homeLoss)} ${t('game.ifWrong')}</span>
       </button>
-      <button class="predict-btn" data-game-id="${game.id}" data-team-id="${game.away_team.id}">
-        ${game.away_team.name}
-        <span class="points-tag points-tag-win">+${awayPts}</span>
-        <span class="points-tag points-tag-loss">-${awayLoss} ${t('game.ifWrong')}</span>
+      <button class="predict-btn" data-game-id="${Number(game.id)}" data-team-id="${Number(game.away_team.id)}">
+        ${esc(game.away_team.name)}
+        <span class="points-tag points-tag-win">+${Number(awayPts)}</span>
+        <span class="points-tag points-tag-loss">-${Number(awayLoss)} ${t('game.ifWrong')}</span>
       </button>
     </div>`;
 }
@@ -252,12 +252,12 @@ function renderTicker(games) {
     .map((g) => {
       const isFinal = g.status === 'final';
       const score = g.status === 'scheduled' ? formatDate(g.start_time) : `${g.home_score ?? 0}-${g.away_score ?? 0}`;
-      const awayLogo = g.away_team.logo_url ? `<img src="${g.away_team.logo_url}" alt="" class="ticker-logo">` : '';
-      const homeLogo = g.home_team.logo_url ? `<img src="${g.home_team.logo_url}" alt="" class="ticker-logo">` : '';
+      const awayLogo = g.away_team.logo_url ? `<img src="${esc(safeImg(g.away_team.logo_url))}" alt="" class="ticker-logo" loading="lazy" decoding="async">` : '';
+      const homeLogo = g.home_team.logo_url ? `<img src="${esc(safeImg(g.home_team.logo_url))}" alt="" class="ticker-logo" loading="lazy" decoding="async">` : '';
       return `
         <span class="ticker-item ${isFinal ? 'final' : ''}">
           <span class="ticker-dot"></span>
-          ${awayLogo}${g.away_team.abbreviation || g.away_team.name} @ ${homeLogo}${g.home_team.abbreviation || g.home_team.name} · ${score}
+          ${awayLogo}${esc(g.away_team.abbreviation || g.away_team.name)} @ ${homeLogo}${esc(g.home_team.abbreviation || g.home_team.name)} · ${esc(score)}
         </span>`;
     })
     .join('');
@@ -276,22 +276,22 @@ function scoreDisplay(game) {
 
 async function renderGameCard(game) {
   const predictionRow = await renderPredictionRow(game);
-  const liveSlot = game.status === 'live' ? `<div class="live-situation-slot" data-game-id="${game.id}"></div>` : '';
+  const liveSlot = game.status === 'live' ? `<div class="live-situation-slot" data-game-id="${Number(game.id)}"></div>` : '';
   return `
     <div class="game-card">
       <div class="game-top-row">
         ${gameStatusLabel(game)}
-        <span class="game-status">${formatDate(game.start_time)}</span>
+        <span class="game-status">${esc(formatDate(game.start_time))}</span>
       </div>
       <div class="scoreboard-row">
         <div class="team-block home">
-          ${game.home_team.logo_url ? `<img src="${game.home_team.logo_url}" alt="">` : ''}
-          <span class="team-name">${game.home_team.name}</span>
+          ${game.home_team.logo_url ? `<img src="${esc(safeImg(game.home_team.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
+          <span class="team-name">${esc(game.home_team.name)}</span>
         </div>
-        <div class="score-led">${scoreDisplay(game)}</div>
+        <div class="score-led">${esc(scoreDisplay(game))}</div>
         <div class="team-block away">
-          ${game.away_team.logo_url ? `<img src="${game.away_team.logo_url}" alt="">` : ''}
-          <span class="team-name">${game.away_team.name}</span>
+          ${game.away_team.logo_url ? `<img src="${esc(safeImg(game.away_team.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
+          <span class="team-name">${esc(game.away_team.name)}</span>
         </div>
       </div>
       ${liveSlot}
@@ -340,10 +340,10 @@ function renderLiveSituationHtml(situation) {
       </div>
       <div class="live-situation-info">
         <span>${halfArrow} ${t('game.inning')} ${situation.inning ?? '-'}</span>
-        <span class="count">${situation.balls ?? 0}-${situation.strikes ?? 0} · ${t('game.outs')} ${situation.outs ?? 0}</span>
-        ${situation.batter ? `<span>${t('game.atBat')}: ${situation.batter}</span>` : ''}
-        ${situation.pitcher ? `<span>${t('game.pitching')}: ${situation.pitcher}</span>` : ''}
-        ${situation.last_play ? `<span class="last-play">${t('game.lastPlay')}: ${situation.last_play}</span>` : ''}
+        <span class="count">${Number(situation.balls ?? 0)}-${Number(situation.strikes ?? 0)} · ${t('game.outs')} ${Number(situation.outs ?? 0)}</span>
+        ${situation.batter ? `<span>${t('game.atBat')}: ${esc(situation.batter)}</span>` : ''}
+        ${situation.pitcher ? `<span>${t('game.pitching')}: ${esc(situation.pitcher)}</span>` : ''}
+        ${situation.last_play ? `<span class="last-play">${t('game.lastPlay')}: ${esc(situation.last_play)}</span>` : ''}
       </div>
     </div>`;
 }
@@ -422,6 +422,11 @@ async function renderGamesSection(leagueKey, specificDate = null) {
 }
 
 function attachPredictionHandlers(container) {
+  // Botón "inicia sesión para predecir" (reemplaza el onclick inline,
+  // incompatible con CSP sin 'unsafe-inline').
+  container.querySelectorAll('[data-open-auth]').forEach((btn) => {
+    btn.addEventListener('click', () => openAuthModal(btn.dataset.openAuth || 'login'));
+  });
   container.querySelectorAll('.predict-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const gameId = Number(btn.dataset.gameId);
@@ -433,7 +438,8 @@ function attachPredictionHandlers(container) {
         const sibling = btn.parentElement.querySelectorAll('.predict-btn');
         sibling.forEach((b) => { if (b !== btn) b.disabled = true; });
       } catch (err) {
-        alert(err.message);
+        if (typeof showToast === 'function') showToast(err.message, 'error');
+        else alert(err.message);
       }
     });
   });
@@ -474,7 +480,8 @@ async function toggleFavorite(star, type, id) {
       star.classList.add('active');
     }
   } catch (err) {
-    alert(err.message);
+    if (typeof showToast === 'function') showToast(err.message, 'error');
+    else alert(err.message);
   }
 }
 
@@ -499,7 +506,7 @@ async function populateLeagueSelector(sportKey) {
     }
 
     row.classList.remove('hidden');
-    select.innerHTML = leagues.map((l) => `<option value="${l.key}">${l.name}</option>`).join('');
+    select.innerHTML = leagues.map((l) => `<option value="${esc(l.key)}">${esc(l.name)}</option>`).join('');
     const primary = leagues.find((l) => l.is_primary) || leagues[0];
     select.value = primary.key;
     return primary.key;

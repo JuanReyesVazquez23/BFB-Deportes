@@ -15,9 +15,9 @@ function outcomeLabel(outcome) {
 function compareRow(labelKey, valueA, valueB) {
   return `
     <tr>
-      <td class="compare-value">${valueA ?? '-'}</td>
+      <td class="compare-value">${esc(valueA ?? '-')}</td>
       <td class="compare-label">${t(labelKey)}</td>
-      <td class="compare-value">${valueB ?? '-'}</td>
+      <td class="compare-value">${esc(valueB ?? '-')}</td>
     </tr>`;
 }
 
@@ -44,15 +44,15 @@ function renderPlayerCompareCard(data) {
     <div class="stats-card">
       <div class="compare-header-row">
         <div class="compare-header-side">
-          ${a.team?.logo_url ? `<img src="${a.team.logo_url}" alt="">` : ''}
-          <h3>${a.full_name}</h3>
-          <span class="stats-subtitle">${a.team ? a.team.name : ''}</span>
+          ${a.team?.logo_url ? `<img src="${esc(safeImg(a.team.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
+          <h3>${esc(a.full_name)}</h3>
+          <span class="stats-subtitle">${a.team ? esc(a.team.name) : ''}</span>
         </div>
         <span class="compare-vs">VS</span>
         <div class="compare-header-side">
-          ${b.team?.logo_url ? `<img src="${b.team.logo_url}" alt="">` : ''}
-          <h3>${b.full_name}</h3>
-          <span class="stats-subtitle">${b.team ? b.team.name : ''}</span>
+          ${b.team?.logo_url ? `<img src="${esc(safeImg(b.team.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
+          <h3>${esc(b.full_name)}</h3>
+          <span class="stats-subtitle">${b.team ? esc(b.team.name) : ''}</span>
         </div>
       </div>
       ${
@@ -123,15 +123,15 @@ function renderTeamCompareCard(data) {
     <div class="stats-card">
       <div class="compare-header-row">
         <div class="compare-header-side">
-          ${a.logo_url ? `<img src="${a.logo_url}" alt="">` : ''}
-          <h3>${a.name}</h3>
-          <span class="stats-subtitle">${a.league || ''}</span>
+          ${a.logo_url ? `<img src="${esc(safeImg(a.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
+          <h3>${esc(a.name)}</h3>
+          <span class="stats-subtitle">${esc(a.league || '')}</span>
         </div>
         <span class="compare-vs">VS</span>
         <div class="compare-header-side">
-          ${b.logo_url ? `<img src="${b.logo_url}" alt="">` : ''}
-          <h3>${b.name}</h3>
-          <span class="stats-subtitle">${b.league || ''}</span>
+          ${b.logo_url ? `<img src="${esc(safeImg(b.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
+          <h3>${esc(b.name)}</h3>
+          <span class="stats-subtitle">${esc(b.league || '')}</span>
         </div>
       </div>
       <table class="compare-table">
@@ -148,10 +148,10 @@ function renderTeamCard(team) {
         .map(
           (r) => `
         <div class="stats-result-row">
-          <span class="outcome-tag ${r.outcome === 'W' ? 'win' : 'loss'}">${outcomeLabel(r.outcome)}</span>
-          <span>${r.rival}</span>
-          <span class="stats-mono">${r.score}</span>
-          <span class="stats-mono">${r.date}</span>
+          <span class="outcome-tag ${r.outcome === 'W' ? 'win' : 'loss'}">${esc(outcomeLabel(r.outcome))}</span>
+          <span>${esc(r.rival)}</span>
+          <span class="stats-mono">${esc(r.score)}</span>
+          <span class="stats-mono">${esc(r.date)}</span>
         </div>`
         )
         .join('')
@@ -160,10 +160,10 @@ function renderTeamCard(team) {
   return `
     <div class="stats-card">
       <div class="stats-card-header">
-        ${team.logo_url ? `<img src="${team.logo_url}" alt="">` : ''}
+        ${team.logo_url ? `<img src="${esc(safeImg(team.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
         <div>
-          <h3>${team.name}</h3>
-          <span class="stats-subtitle">${team.league || ''} ${team.division ? '· ' + team.division : ''}</span>
+          <h3>${esc(team.name)}</h3>
+          <span class="stats-subtitle">${esc(team.league || '')} ${team.division ? '· ' + esc(team.division) : ''}</span>
         </div>
       </div>
       <div class="stats-record-row">
@@ -259,12 +259,12 @@ function renderPlayerCard(player) {
   return `
     <div class="stats-card">
       <div class="stats-card-header">
-        ${player.team?.logo_url ? `<img src="${player.team.logo_url}" alt="">` : ''}
+        ${player.team?.logo_url ? `<img src="${esc(safeImg(player.team.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
         <div>
-          <h3>${player.full_name}</h3>
+          <h3>${esc(player.full_name)}</h3>
           <span class="stats-subtitle">
-            ${player.position || ''} ${player.jersey_number ? '· #' + player.jersey_number : ''}
-            ${player.team ? '· ' + player.team.name : ''}
+            ${esc(player.position || '')} ${player.jersey_number ? '· #' + Number(player.jersey_number) : ''}
+            ${player.team ? '· ' + esc(player.team.name) : ''}
           </span>
         </div>
       </div>
@@ -293,10 +293,10 @@ async function fetchSuggestions(query) {
     suggestionsBox.innerHTML = results
       .map(
         (r) => `
-        <button type="button" class="stats-suggestion-item" data-id="${r.id}" data-type="${r.type}" data-label="${r.label}">
-          ${r.logo_url ? `<img src="${r.logo_url}" alt="">` : ''}
-          <span>${r.label}</span>
-          <small>${r.sublabel || ''}</small>
+        <button type="button" class="stats-suggestion-item" data-id="${Number(r.id)}" data-type="${esc(r.type)}" data-label="${esc(r.label)}">
+          ${r.logo_url ? `<img src="${esc(safeImg(r.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
+          <span>${esc(r.label)}</span>
+          <small>${esc(r.sublabel || '')}</small>
         </button>`
       )
       .join('');
@@ -328,10 +328,10 @@ async function selectStatsResult(type, id, label) {
     resultEl.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
     try {
       const endpoint = type === 'team' ? '/stats/teams/compare' : '/stats/players/compare';
-      const data = await api.get(`${endpoint}?id_a=${firstComparedEntity.id}&id_b=${id}`);
+      const data = await api.get(`${endpoint}?id_a=${Number(firstComparedEntity.id)}&id_b=${Number(id)}`);
       resultEl.innerHTML = type === 'team' ? renderTeamCompareCard(data) : renderPlayerCompareCard(data);
     } catch (err) {
-      resultEl.innerHTML = `<p class="empty-state">${err.message}</p>`;
+      resultEl.innerHTML = `<p class="empty-state">${esc(err.message)}</p>`;
     }
     firstComparedEntity = null;
     statusEl.classList.add('hidden');

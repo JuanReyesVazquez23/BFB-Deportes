@@ -37,6 +37,21 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        if len(v) > 20:
+            raise ValueError("Usuario o contraseña incorrectos.")
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        # Tope para que un payload gigante no llegue a bcrypt (costoso).
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("Usuario o contraseña incorrectos.")
+        return v
+
 
 class UserOut(BaseModel):
     id: int

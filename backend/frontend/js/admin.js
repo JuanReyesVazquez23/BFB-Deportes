@@ -29,7 +29,7 @@ function toggleAdminPanel() {
 function renderAdminLeagueOptions() {
   const select = document.getElementById('admin-league-select');
   if (!select || select.dataset.filled) return;
-  select.innerHTML = ADMIN_LEAGUE_KEYS.map((key) => `<option value="${key}">${key}</option>`).join('');
+  select.innerHTML = ADMIN_LEAGUE_KEYS.map((key) => `<option value="${esc(key)}">${esc(key)}</option>`).join('');
   select.dataset.filled = 'true';
 }
 
@@ -47,13 +47,13 @@ async function loadAdminTeams() {
       listEl.innerHTML = teams
         .map(
           (team) => `
-        <div class="admin-team-row" data-team-id="${team.id}">
+        <div class="admin-team-row" data-team-id="${Number(team.id)}">
           <span>
-            ${team.name || '(sin nombre)'}
+            ${esc(team.name || '(sin nombre)')}
             ${team.is_placeholder ? ' · placeholder' : ''}
             ${!team.conference && !team.division ? ' · sin conferencia/división' : ''}
           </span>
-          <button class="btn btn-danger btn-small admin-delete-btn" data-team-id="${team.id}" data-team-name="${team.name || ''}">
+          <button class="btn btn-danger btn-small admin-delete-btn" data-team-id="${Number(team.id)}" data-team-name="${esc(team.name || '')}">
             Borrar
           </button>
         </div>`
@@ -65,7 +65,7 @@ async function loadAdminTeams() {
       });
     }
   } catch (err) {
-    listEl.innerHTML = `<p>${err.message}</p>`;
+    listEl.innerHTML = `<p>${esc(err.message)}</p>`;
   }
 
   loadExcludedTeams();
@@ -88,8 +88,8 @@ async function loadExcludedTeams() {
         .map(
           (e) => `
       <div class="admin-team-row">
-        <span>${e.team_name || e.external_id}</span>
-        <button class="btn btn-outline btn-small admin-restore-btn" data-excluded-id="${e.id}">
+        <span>${esc(e.team_name || e.external_id)}</span>
+        <button class="btn btn-outline btn-small admin-restore-btn" data-excluded-id="${Number(e.id)}">
           Restaurar
         </button>
       </div>`
@@ -100,7 +100,7 @@ async function loadExcludedTeams() {
       btn.addEventListener('click', () => handleAdminRestore(btn.dataset.excludedId));
     });
   } catch (err) {
-    listEl.innerHTML = `<p>${err.message}</p>`;
+    listEl.innerHTML = `<p>${esc(err.message)}</p>`;
   }
 }
 
@@ -140,13 +140,13 @@ async function loadAdminLeagues() {
         (lg) => `
       <div class="admin-team-row">
         <span>
-          ${lg.name} · ${lg.team_count} equipo(s)
+          ${esc(lg.name)} · ${Number(lg.team_count)} equipo(s)
           ${!lg.sync_enabled ? ' · <strong>borrada</strong>' : ''}
         </span>
         ${
           lg.sync_enabled
-            ? `<button class="btn btn-danger btn-small admin-delete-league-btn" data-league-key="${lg.key}" data-league-name="${lg.name}">Borrar liga</button>`
-            : `<button class="btn btn-outline btn-small admin-enable-league-btn" data-league-key="${lg.key}">Reactivar</button>`
+            ? `<button class="btn btn-danger btn-small admin-delete-league-btn" data-league-key="${esc(lg.key)}" data-league-name="${esc(lg.name)}">Borrar liga</button>`
+            : `<button class="btn btn-outline btn-small admin-enable-league-btn" data-league-key="${esc(lg.key)}">Reactivar</button>`
         }
       </div>`
       )
@@ -159,7 +159,7 @@ async function loadAdminLeagues() {
       btn.addEventListener('click', () => handleEnableLeague(btn.dataset.leagueKey));
     });
   } catch (err) {
-    listEl.innerHTML = `<p>${err.message}</p>`;
+    listEl.innerHTML = `<p>${esc(err.message)}</p>`;
   }
 }
 

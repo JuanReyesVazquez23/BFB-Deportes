@@ -1,10 +1,13 @@
-fastapi==0.115.0
+fastapi==0.115.6
 uvicorn[standard]==0.30.6
 sqlalchemy==2.0.35
 psycopg2-binary==2.9.12
 pydantic[email]==2.9.2
 pydantic-settings==2.5.2
-python-jose[cryptography]==3.3.0
+# python-jose eliminado por CVE-2024-33663 (confusión de algoritmo) y
+# CVE-2024-33664 (JWT-bomb DoS), además de estar abandonado desde 2022.
+# Se usa PyJWT, mantenido y sin esos vectores.
+PyJWT==2.10.1
 passlib[bcrypt]==1.7.4
 # bcrypt>=5.0.0 rompe una auto-prueba interna de passlib 1.7.4
 # (ValueError: "password cannot be longer than 72 bytes", incluso con
@@ -13,7 +16,9 @@ passlib[bcrypt]==1.7.4
 # años). Se fija esta versión, confirmada compatible, para que pip no
 # instale una versión nueva rota al desplegar.
 bcrypt==4.3.0
-python-multipart==0.0.9
+# python-multipart<0.0.18 tiene DoS por parsing multipart (CVE-2024-53981).
+# fastapi>=0.115.6 + starlette>=0.41.3 acompañan el fix.
+python-multipart==0.0.18
 httpx==0.27.2
 feedparser==6.0.11
 deep-translator==1.11.4

@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_db
+from app.core.rate_limit import enforce_rate_limit
 from app.models.sport import Game, League, Player, Sport, Team
 from app.core.config import settings
 from app.services import football_stats_service, mlb_service, nba_stats_service
@@ -11,9 +12,15 @@ from app.services import football_stats_service, mlb_service, nba_stats_service
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 
+def _escape_like(value: str) -> str:
+    """Escapa %, _ y \\ para que el buscador no permita patrones LIKE arbitrarios."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 @router.get("/search")
 def search_entities(
-    q: str = Query(min_length=2, description="Nombre a buscar (mínimo 2 caracteres)"),
+    request: Request,
+    q: str = Query(min_length=2, max_length=80, description="Nombre a buscar (mínimo 2 caracteres)"),
     entity_type: str = Query(default="team", alias="type", pattern="^(team|player)$"),
     sport_key: str = Query(alias="sport", pattern="^(baseball|football|basketball)$"),
     db: Session = Depends(get_db),
@@ -30,13 +37,16 @@ def search_entities(
     if not sport:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deporte no encontrado.")
 
+    enforce_rate_limit(request, bucket="stats_search", limit=30, window_seconds=60)
+
+    like_pattern = f"%{_escape_like(q.strip())}%"
     if entity_type == "player":
         matches = (
             db.query(Player)
             .join(Team, Player.team_id == Team.id)
             .join(League, Team.league_id == League.id)
             .options(joinedload(Player.team))
-            .filter(Player.full_name.ilike(f"%{q}%"), League.sport_id == sport.id)
+            .filter(Player.full_name.ilike(like_pattern, escape="\\"), League.sport_id == sport.id)
             .limit(10)
             .all()
         )
@@ -53,7 +63,7 @@ def search_entities(
     matches = (
         db.query(Team)
         .join(League, Team.league_id == League.id)
-        .filter(Team.name.ilike(f"%{q}%"), Team.is_placeholder.is_(False), League.sport_id == sport.id)
+        .filter(Team.name.ilike(like_pattern, escape="\\"), Team.is_placeholder.is_(False), League.sport_id == sport.id)
         .limit(10)
         .all()
     )
@@ -117,7 +127,7 @@ def _build_team_profile(team_id: int, db: Session) -> dict:
 
 
 @router.get("/team/{team_id}")
-def team_stats(team_id: int, db: Session = Depends(get_db)):
+def team_stats(team_id: int = Path(gt=0, le=2147483647), db: Session = Depends(get_db)):
     """Perfil real de un equipo: récord, posición y sus últimos partidos jugados."""
     profile = _build_team_profile(team_id, db)
     profile.pop("sport_id", None)  # detalle interno, no se expone en el perfil individual
@@ -126,8 +136,9 @@ def team_stats(team_id: int, db: Session = Depends(get_db)):
 
 @router.get("/teams/compare")
 def compare_teams(
-    id_a: int = Query(description="ID del primer equipo"),
-    id_b: int = Query(description="ID del segundo equipo"),
+    request: Request,
+    id_a: int = Query(gt=0, le=2147483647, description="ID del primer equipo"),
+    id_b: int = Query(gt=0, le=2147483647, description="ID del segundo equipo"),
     db: Session = Depends(get_db),
 ):
     """
@@ -135,6 +146,7 @@ def compare_teams(
     deportes distintos (ej. un equipo de MLB contra uno de NBA) — se
     valida explícitamente y se rechaza con 400 si no coinciden.
     """
+    enforce_rate_limit(request, bucket="stats_compare", limit=20, window_seconds=60)
     if id_a == id_b:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Elige dos equipos distintos.")
 
@@ -251,7 +263,11 @@ async def _build_player_profile(player_id: int, db: Session) -> dict:
 
 
 @router.get("/player/{player_id}")
-async def player_stats(player_id: int, db: Session = Depends(get_db)):
+async def player_stats(
+    request: Request,
+    player_id: int = Path(gt=0, le=2147483647),
+    db: Session = Depends(get_db),
+):
     """
     Perfil real de un jugador: posición, número, equipo, y sus estadísticas
     reales de la temporada actual (home runs, hits, OBP, etc. si es
@@ -262,6 +278,8 @@ async def player_stats(player_id: int, db: Session = Depends(get_db)):
     externa falla, se muestra igual el perfil del jugador sin números en
     vez de romper la página completa.
     """
+    # 1 llamada externa por request (MLB/NBA/API-Football): rate-limit.
+    enforce_rate_limit(request, bucket="stats_player", limit=20, window_seconds=60)
     profile = await _build_player_profile(player_id, db)
     profile.pop("sport_id", None)  # detalle interno, no se expone en el perfil individual
     return profile
@@ -269,8 +287,9 @@ async def player_stats(player_id: int, db: Session = Depends(get_db)):
 
 @router.get("/players/compare")
 async def compare_players(
-    id_a: int = Query(description="ID del primer jugador"),
-    id_b: int = Query(description="ID del segundo jugador"),
+    request: Request,
+    id_a: int = Query(gt=0, le=2147483647, description="ID del primer jugador"),
+    id_b: int = Query(gt=0, le=2147483647, description="ID del segundo jugador"),
     db: Session = Depends(get_db),
 ):
     """
@@ -278,6 +297,9 @@ async def compare_players(
     de deportes distintos (ej. un jugador de MLB contra uno de NBA) — se
     valida explícitamente y se rechaza con 400 si no coinciden.
     """
+    # Hasta 4 llamadas externas por request (2 jugadores × MLB/NBA + fútbol):
+    # límite más estricto para no agotar la cuota de 100/día de API-Football.
+    enforce_rate_limit(request, bucket="stats_compare", limit=10, window_seconds=60)
     if id_a == id_b:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Elige dos jugadores distintos.")
 

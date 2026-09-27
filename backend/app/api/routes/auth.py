@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -45,7 +46,13 @@ def register(payload: UserCreate, request: Request, response: Response, db: Sess
         bfb_points=settings.NEW_USER_STARTING_POINTS,
     )
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Carrera concurrente: otro request registró el mismo usuario/email
+        # entre el check de arriba y el commit. Mensaje genérico igual.
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Usuario o correo ya registrado.")
     db.refresh(user)
 
     _set_session_cookie(response, user.id)
@@ -78,7 +85,15 @@ def login(payload: UserLogin, request: Request, response: Response, db: Session 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 def logout(response: Response):
-    response.delete_cookie(settings.COOKIE_NAME, path="/")
+    # Los flags deben coincidir con los de _set_session_cookie: si no, el
+    # navegador ignora el borrado en producción (Secure/SameSite distintos).
+    response.delete_cookie(
+        settings.COOKIE_NAME,
+        path="/",
+        httponly=True,
+        samesite="lax",
+        secure=settings.ENV == "production",
+    )
     return None
 
 

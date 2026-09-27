@@ -16,8 +16,8 @@ function renderUserStatus() {
     statusEl.innerHTML = `
       <div class="account-menu">
         <button class="account-menu-toggle" id="account-menu-toggle">
-          <span class="points-pill">${window.currentUser.bfb_points} pts</span>
-          <span class="account-username">${window.currentUser.username}</span>
+          <span class="points-pill">${Number(window.currentUser.bfb_points)} pts</span>
+          <span class="account-username">${esc(window.currentUser.username)}</span>
           <span class="account-menu-caret">▾</span>
         </button>
         <div class="account-menu-dropdown hidden" id="account-menu-dropdown">

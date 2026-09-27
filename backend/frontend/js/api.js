@@ -35,7 +35,19 @@ async function apiRequest(path, { method = 'GET', body = null } = {}) {
   }
 
   if (!response.ok) {
-    const message = (data && data.detail) || 'Error de comunicación con el servidor.';
+    // FastAPI devuelve detail como string o como array de errores de
+    // validación ({loc, msg}). Se normaliza a string para que el frontend
+    // nunca interpole objetos ([object Object]) en el DOM.
+    let message = 'Error de comunicación con el servidor.';
+    const detail = data && data.detail;
+    if (typeof detail === 'string' && detail) {
+      message = detail;
+    } else if (Array.isArray(detail) && detail.length) {
+      message = detail
+        .map((d) => (typeof d === 'string' ? d : d && d.msg ? String(d.msg) : ''))
+        .filter(Boolean)
+        .join(' · ') || message;
+    }
     throw new ApiError(message, response.status);
   }
 

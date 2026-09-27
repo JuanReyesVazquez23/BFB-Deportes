@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -11,8 +11,8 @@ router = APIRouter(prefix="/news", tags=["news"])
 
 @router.get("/{sport_key}", response_model=list[NewsOut])
 def get_sport_news(
-    sport_key: str,
-    limit: int = 15,
+    sport_key: str = Path(pattern=r"^[a-z_]{1,30}$"),
+    limit: int = Query(default=15, ge=1, le=50),
     sort: str = Query(default="recent", pattern="^(recent|trending)$"),
     lang: str = Query(default="es", pattern="^(es|en)$"),
     db: Session = Depends(get_db),

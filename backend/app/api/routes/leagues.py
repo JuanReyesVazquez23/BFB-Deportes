@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -17,7 +17,7 @@ DISABLED_LEAGUE_KEYS = {"wnba", "ncaab", "world_cup"}
 
 
 @router.get("/sports/{sport_key}/leagues", response_model=list[LeagueOut])
-def list_leagues(sport_key: str, db: Session = Depends(get_db)):
+def list_leagues(sport_key: str = Path(pattern=r"^[a-z_]{1,30}$"), db: Session = Depends(get_db)):
     sport = db.query(Sport).filter(Sport.key == sport_key).first()
     if not sport:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deporte no encontrado.")
@@ -30,7 +30,7 @@ def list_leagues(sport_key: str, db: Session = Depends(get_db)):
 
 
 @router.get("/leagues/{league_key}/teams", response_model=list[TeamOut])
-def list_teams(league_key: str, db: Session = Depends(get_db)):
+def list_teams(league_key: str = Path(pattern=r"^[a-z0-9_]{1,40}$"), db: Session = Depends(get_db)):
     league = db.query(League).filter(League.key == league_key).first()
     if not league:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Liga no encontrada.")
@@ -43,7 +43,7 @@ def list_teams(league_key: str, db: Session = Depends(get_db)):
 
 
 @router.get("/leagues/{league_key}/standings", response_model=list[StandingsGroupOut])
-def get_standings(league_key: str, db: Session = Depends(get_db)):
+def get_standings(league_key: str = Path(pattern=r"^[a-z0-9_]{1,40}$"), db: Session = Depends(get_db)):
     """
     Tabla de posiciones, agrupada por división (o conferencia si no hay
     división, o toda la liga en un solo grupo si no aplica ninguna) con

@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PredictionCreate(BaseModel):
-    game_id: int
-    predicted_team_id: int
+    game_id: int = Field(gt=0, le=2147483647)
+    predicted_team_id: int = Field(gt=0, le=2147483647)
 
 
 class PredictionOut(BaseModel):

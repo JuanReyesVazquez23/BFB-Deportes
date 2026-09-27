@@ -71,12 +71,12 @@ function renderPredictionHistoryRow(p) {
   return `
     <div class="prediction-row ${statusClass}">
       <div>
-        <strong>${p.predicted_team?.name || '—'}</strong>
-        <span class="stats-subtitle">${matchup} ${score ? '· ' + score : ''}</span>
+        <strong>${esc(p.predicted_team?.name || '—')}</strong>
+        <span class="stats-subtitle">${esc(matchup)} ${score ? '· ' + esc(score) : ''}</span>
       </div>
       <div class="prediction-row-status">
         ${pointsTag}
-        ${canDelete ? `<button class="prediction-delete-btn" data-prediction-id="${p.id}" aria-label="Borrar">&times;</button>` : ''}
+        ${canDelete ? `<button class="prediction-delete-btn" data-prediction-id="${Number(p.id)}" aria-label="Borrar">&times;</button>` : ''}
       </div>
     </div>`;
 }
@@ -106,7 +106,7 @@ async function openPredictionsModal() {
     const predictions = await api.get('/predictions/me');
     renderPredictionsListInto(listEl, predictions);
   } catch (err) {
-    listEl.innerHTML = `<p class="empty-state">${err.message}</p>`;
+    listEl.innerHTML = `<p class="empty-state">${esc(err.message)}</p>`;
   }
 }
 

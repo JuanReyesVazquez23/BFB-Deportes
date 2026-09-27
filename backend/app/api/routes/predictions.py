@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Path, status
+from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -70,7 +70,7 @@ def list_my_predictions(current_user: User = Depends(get_current_user), db: Sess
 
 
 class MarkSeenPayload(BaseModel):
-    prediction_ids: list[int]
+    prediction_ids: list[int] = Field(max_length=200)
 
 
 @router.post("/me/mark-seen")
@@ -84,6 +84,8 @@ def mark_predictions_seen(
     usuario el aviso de "ganaste/perdiste"), para que no se le vuelva a
     avisar de lo mismo en su próxima visita.
     """
+    if not payload.prediction_ids:
+        return {"ok": True}
     db.query(Prediction).filter(
         Prediction.id.in_(payload.prediction_ids),
         Prediction.user_id == current_user.id,  # nunca marcar predicciones de otro usuario
@@ -94,7 +96,7 @@ def mark_predictions_seen(
 
 @router.delete("/{prediction_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_prediction(
-    prediction_id: int,
+    prediction_id: int = Path(gt=0, le=2147483647),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -173,7 +175,11 @@ def create_prediction(
 
 
 @router.get("/potential-points/{game_id}/{team_id}")
-def preview_potential_points(game_id: int, team_id: int, db: Session = Depends(get_db)):
+def preview_potential_points(
+    game_id: int = Path(gt=0, le=2147483647),
+    team_id: int = Path(gt=0, le=2147483647),
+    db: Session = Depends(get_db),
+):
     """Permite mostrar en el frontend cuántos puntos se ganarían ANTES de confirmar la predicción."""
     game = db.get(Game, game_id)
     if not game:

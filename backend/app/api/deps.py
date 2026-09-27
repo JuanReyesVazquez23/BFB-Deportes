@@ -28,7 +28,12 @@ def get_current_user(
     if user_id is None:
         raise credentials_error
 
-    user = db.get(User, int(user_id))
+    try:
+        user_pk = int(user_id)
+    except (TypeError, ValueError):
+        raise credentials_error
+
+    user = db.get(User, user_pk)
     if user is None or not user.is_active:
         raise credentials_error
 
@@ -45,7 +50,11 @@ def get_current_user_optional(
     user_id = decode_access_token(bfb_session)
     if user_id is None:
         return None
-    return db.get(User, int(user_id))
+    try:
+        user_pk = int(user_id)
+    except (TypeError, ValueError):
+        return None
+    return db.get(User, user_pk)
 
 
 def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:

@@ -9,7 +9,7 @@ Protegido por get_current_admin_user (ver app/api/deps.py): requiere una
 sesión ya iniciada con un usuario incluido en ADMIN_USERNAMES. No hay un
 segundo password ni un sistema nuevo — reutiliza el login que ya existe.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_admin_user
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 @router.get("/teams")
 def list_all_teams(
-    league_key: str,
+    league_key: str = Query(pattern=r"^[a-z0-9_]{1,40}$"),
     db: Session = Depends(get_db),
     _admin: User = Depends(get_current_admin_user),
 ):
@@ -54,7 +54,7 @@ def list_all_teams(
 
 @router.delete("/teams/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_team(
-    team_id: int,
+    team_id: int = Path(gt=0, le=2147483647),
     db: Session = Depends(get_db),
     _admin: User = Depends(get_current_admin_user),
 ):
@@ -83,7 +83,7 @@ def delete_team(
 
 @router.get("/excluded-teams")
 def list_excluded_teams(
-    league_key: str,
+    league_key: str = Query(pattern=r"^[a-z0-9_]{1,40}$"),
     db: Session = Depends(get_db),
     _admin: User = Depends(get_current_admin_user),
 ):
@@ -110,7 +110,7 @@ def list_excluded_teams(
 
 @router.delete("/excluded-teams/{excluded_team_id}", status_code=status.HTTP_204_NO_CONTENT)
 def restore_excluded_team(
-    excluded_team_id: int,
+    excluded_team_id: int = Path(gt=0, le=2147483647),
     db: Session = Depends(get_db),
     _admin: User = Depends(get_current_admin_user),
 ):
@@ -152,7 +152,7 @@ def list_all_leagues(
 
 @router.delete("/leagues/{league_key}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_league(
-    league_key: str,
+    league_key: str = Path(pattern=r"^[a-z0-9_]{1,40}$"),
     db: Session = Depends(get_db),
     _admin: User = Depends(get_current_admin_user),
 ):
@@ -177,7 +177,7 @@ def delete_league(
 
 @router.post("/leagues/{league_key}/enable", status_code=status.HTTP_204_NO_CONTENT)
 def enable_league(
-    league_key: str,
+    league_key: str = Path(pattern=r"^[a-z0-9_]{1,40}$"),
     db: Session = Depends(get_db),
     _admin: User = Depends(get_current_admin_user),
 ):

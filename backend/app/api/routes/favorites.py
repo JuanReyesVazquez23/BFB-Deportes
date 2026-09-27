@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -14,8 +14,13 @@ router = APIRouter(prefix="/favorites", tags=["favorites"])
 def _validate_target_exists(db: Session, favorite_type: str, target_id: int) -> None:
     model_map = {"team": Team, "player": Player, "league": League}
     model = model_map[favorite_type]
-    if not db.get(model, target_id):
+    target = db.get(model, target_id)
+    if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{favorite_type} no encontrado.")
+    # Los placeholders (ej. "American League" del All-Star) no son equipos
+    # reales: no tiene sentido favoritarlos y ensucian el perfil.
+    if favorite_type == "team" and getattr(target, "is_placeholder", False):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ese equipo no se puede marcar como favorito.")
 
 
 @router.get("/me", response_model=list[FavoriteOut])
@@ -50,7 +55,7 @@ def add_favorite(
 
 @router.delete("/{favorite_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_favorite(
-    favorite_id: int,
+    favorite_id: int = Path(gt=0, le=2147483647),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
