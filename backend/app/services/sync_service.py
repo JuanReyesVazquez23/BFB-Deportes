@@ -701,6 +701,28 @@ async def sync_basketball_league(league_key: str) -> None:
                     )
                 game.last_synced_at = datetime.now(timezone.utc)
 
+            # Limpieza: partidos programados que la API ya NO devuelve en la
+            # ventana (pretemporada vieja, cancelados) y sin predicciones de
+            # usuarios: se borran para que no queden como "próximos" eternos.
+            # - Los que SÍ tienen predicciones se conservan (no se le borra el
+            #   historial a nadie; el usuario puede borrar su predicción).
+            # - Es auto-reparable: si un partido legítimo se borra por error
+            #   (ej. un fallo puntual de la API), el próximo ciclo lo recrea
+            #   por external_id, y como no tenía predicciones no se pierde nada.
+            seen_external_ids = {str(g.get("id")) for g in games_payloads}
+            stale_filter = [
+                Game.league_id == league.id,
+                Game.status != "final",
+                ~Game.id.in_(db.query(Prediction.game_id)),
+            ]
+            if seen_external_ids:
+                stale_filter.append(~Game.external_id.in_(seen_external_ids))
+            stale_games = db.query(Game).filter(*stale_filter).all()
+            for stale in stale_games:
+                db.delete(stale)
+            if stale_games:
+                logger.info("NBA: %d partido(s) obsoletos eliminados (ej. pretemporada).", len(stale_games))
+
             # Récord real (wins/losses/win_pct): no hay endpoint de
             # standings gratuito para NBA, así que se deriva de los
             # partidos ya sincronizados. Antes quedaba en 0-0 para todos

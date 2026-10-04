@@ -217,9 +217,10 @@
   box-shadow: 0 0 8px rgba(255, 196, 0, 0.65);
 }
 
-/* Logo BFB: SVG propio servido como imagen (ver assets/logos/). */
+/* Logo BFB: SVG inline (usa Anton/Inter ya cargadas en la página; un <img>
+   no podría usarlas porque el SVG quedaría aislado). */
 .logo-sports {
-  width: 232px;
+  width: 248px;
   height: 64px;
   display: block;
   margin: 4px 0 2px;
