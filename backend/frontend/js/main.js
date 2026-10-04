@@ -304,7 +304,7 @@ async function renderGameGroup(titleKey, games) {
   if (!games.length) return '';
   const cards = await Promise.all(games.map(renderGameCard));
   return `
-    <h3 class="section-title" style="font-size:16px;margin-top:22px;">${t(titleKey)}</h3>
+    <h3 class="game-group-title">${t(titleKey)}</h3>
     ${cards.join('')}`;
 }
 

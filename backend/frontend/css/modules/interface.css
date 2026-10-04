@@ -481,6 +481,11 @@
   margin-bottom: 12px;
 }
 
+.admin-subtitle {
+  margin: 20px 0 8px;
+  font-size: 15px;
+}
+
 .admin-team-row {
   display: flex;
   align-items: center;

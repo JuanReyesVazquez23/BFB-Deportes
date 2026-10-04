@@ -18,7 +18,7 @@
 
   <!-- Cache-busting: sube el número ?v= en CSS/JS cada vez que cambien,
        para que el navegador no siga usando una versión vieja cacheada. -->
-  <link rel="stylesheet" href="css/styles.css?v=20260903-2">
+  <link rel="stylesheet" href="css/styles.css?v=20261004">
 </head>
 <body>
 
@@ -106,28 +106,8 @@
 
   <main class="container">
 
-    <!-- Posiciones -->
-    <section class="section" id="standings-section">
-      <h2 class="section-title" data-i18n="sections.standings">Posiciones</h2>
-      <div id="standings-container"></div>
-    </section>
-
-    <!-- Jugadores hoy + Noticias -->
-    <section class="section">
-      <div class="grid-3">
-        <div id="players-today-section">
-          <h2 class="section-title" data-i18n="sections.playersToday">Jugadores Hoy</h2>
-          <div class="card" id="players-today-container"></div>
-        </div>
-        <div style="grid-column: span 2;">
-          <h2 class="section-title" data-i18n="sections.generalNews">Noticias Generales</h2>
-          <div class="grid-3" id="news-container"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Partidos: en vivo, resultados y próximos con predicción -->
-    <section class="section">
+    <!-- 01 — Lo urgente primero: partidos en vivo, resultados y próximos para predecir -->
+    <section class="section" id="games-section">
       <h2 class="section-title">
         <span data-i18n="sections.liveAndResults">En Vivo y Resultados</span>
         <small data-i18n="game.predict">Predice y gana puntos BFB</small>
@@ -140,8 +120,14 @@
       <div id="games-container"></div>
     </section>
 
-    <!-- Estadísticas -->
-    <section class="section">
+    <!-- 02 — Posiciones -->
+    <section class="section" id="standings-section">
+      <h2 class="section-title" data-i18n="sections.standings">Posiciones</h2>
+      <div id="standings-container"></div>
+    </section>
+
+    <!-- 03 — Estadísticas -->
+    <section class="section" id="stats-section">
       <h2 class="section-title" data-i18n="sections.stats">Estadísticas</h2>
       <div class="stats-search">
         <select id="stats-type" aria-label="Tipo de estadística">
@@ -166,6 +152,19 @@
       <div class="stats-result" id="stats-result"></div>
     </section>
 
+    <!-- 04 — Contenido secundario: noticias + jugadores de hoy -->
+    <section class="section" id="news-section">
+      <div class="split-layout">
+        <div class="split-main">
+          <h2 class="section-title" data-i18n="sections.generalNews">Noticias Generales</h2>
+          <div class="news-grid" id="news-container"></div>
+        </div>
+        <aside class="split-side" id="players-today-section">
+          <h2 class="section-title" data-i18n="sections.playersToday">Jugadores Hoy</h2>
+          <div class="card" id="players-today-container"></div>
+        </aside>
+      </div>
+    </section>
 
   </main>
 
@@ -188,7 +187,7 @@
     <div id="admin-team-list"></div>
     <div id="admin-excluded-list"></div>
 
-    <h3 style="margin-top:20px">Ligas completas</h3>
+    <h3 class="admin-subtitle">Ligas completas</h3>
     <p class="stats-subtitle">Borra una liga entera (útil para un evento ya pasado, ej. un Mundial anterior). Se puede reactivar después.</p>
     <div id="admin-leagues-list"></div>
   </div>
@@ -249,7 +248,7 @@
   <script src="js/auth.js?v=20260803"></script>
   <script src="js/predictions.js?v=20260903-3"></script>
   <script src="js/stats.js?v=20260801"></script>
-  <script src="js/main.js?v=20260803"></script>
+  <script src="js/main.js?v=20261004"></script>
   <script src="js/admin.js?v=20260807"></script>
   <script src="js/pwa-install.js?v=20260804"></script>
 </body>

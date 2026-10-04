@@ -1,19 +1,41 @@
-/* ---------- Layout de secciones ---------- */
+/* ---------- Layout de secciones: orden jerárquico 01 En vivo > 02 Posiciones > 03 Stats > 04 Noticias.
+   La numeración es automática por CSS (sin tocar i18n): cada .section suma uno. ---------- */
+main.container {
+  counter-reset: bfb-section;
+}
+
 .section {
-  padding: 44px 0;
+  counter-increment: bfb-section;
+  padding: 56px 0;
   border-bottom: 1px solid var(--bfb-border);
+}
+
+.section:last-child {
+  border-bottom: none;
 }
 
 .section-title {
   font-family: var(--font-display);
-  font-size: 23px;
+  font-size: 26px;
   letter-spacing: 0.02em;
-  margin: 0 0 20px;
+  margin: 0 0 24px;
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding-left: 14px;
-  border-left: 4px solid var(--bfb-yellow);
+  gap: 12px;
+}
+
+/* Número de sección: chip monoespaciado, sin peso visual extra */
+.section-title::before {
+  content: counter(bfb-section, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--bfb-yellow);
+  border: 1px solid var(--bfb-border-bright);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  letter-spacing: 0.08em;
+  transform: translateY(-3px);
 }
 
 .section-title small {
@@ -23,14 +45,52 @@
   font-weight: 400;
 }
 
+/* Subtítulos de grupo dentro de una sección (En vivo / Próximos / Finalizados):
+   nivel 2 de la jerarquía — texto sobrio, sin número ni barra lateral. */
+.game-group-title {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--bfb-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 28px 0 14px;
+}
+
 .grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  gap: 20px;
 }
 
 @media (max-width: 900px) {
   .grid-3 { grid-template-columns: 1fr; }
+}
+
+/* Layout 04 Noticias (principal) + Jugadores hoy (complemento lateral) */
+.split-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.split-main,
+.split-side {
+  min-width: 0;
+}
+
+/* Las tarjetas de noticia fluyen solas: 2-3 columnas según ancho, sin spans manuales */
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .split-layout { grid-template-columns: 1fr; }
+  .section { padding: 40px 0; }
+  .section-title { font-size: 22px; }
 }
 
 /* ---------- Tabla de posiciones ---------- */
@@ -172,11 +232,10 @@
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow-card);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .news-card:hover {
-  transform: translateY(-4px);
   box-shadow: var(--shadow-card-hover);
   border-color: var(--bfb-border-bright);
 }
@@ -278,10 +337,9 @@
 
 .score-led {
   font-family: var(--font-mono);
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--bfb-yellow);
-  text-shadow: 0 0 10px rgba(255, 196, 0, 0.45);
   min-width: 100px;
   text-align: center;
   letter-spacing: 0.05em;
@@ -289,7 +347,6 @@
   border: 1px solid var(--bfb-border);
   border-radius: var(--radius-sm);
   padding: 6px 14px;
-  box-shadow: inset 0 0 16px rgba(255, 196, 0, 0.06);
 }
 
 .game-details-box {
