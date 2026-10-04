@@ -142,7 +142,12 @@ def create_prediction(
             detail="Solo se puede predecir un partido que aún no ha comenzado.",
         )
 
-    if game.start_time <= datetime.now(timezone.utc):
+    # Normaliza a aware: algún driver/DB puede devolver naive y la
+    # comparación ingenua contra now(utc) rompería con TypeError (500).
+    start_time = game.start_time
+    if start_time.tzinfo is None:
+        start_time = start_time.replace(tzinfo=timezone.utc)
+    if start_time <= datetime.now(timezone.utc):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El partido ya va a comenzar.")
 
     if payload.predicted_team_id not in (game.home_team_id, game.away_team_id):

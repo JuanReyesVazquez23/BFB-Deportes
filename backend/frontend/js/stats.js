@@ -7,6 +7,10 @@ let statsDebounceTimer = null;
 let statsSelectedType = 'team';
 let compareMode = false;
 let firstComparedEntity = null; // {id, label} del primer elemento elegido en modo comparación
+// Contador anti-races: si el usuario escribe o cambia de pestaña mientras un
+// fetch está en vuelo, la respuesta vieja se descarta en vez de pintar
+// sugerencias del deporte/texto anterior.
+let statsRequestSeq = 0;
 
 function outcomeLabel(outcome) {
   return outcome === 'W' ? t('stats.win') : t('stats.loss');
@@ -279,12 +283,17 @@ function renderPlayerCard(player) {
 
 async function fetchSuggestions(query) {
   const suggestionsBox = document.getElementById('stats-suggestions');
+  const mySeq = ++statsRequestSeq;
   if (query.length < 2) {
     suggestionsBox.classList.add('hidden');
     return;
   }
   try {
     const results = await api.get(`/stats/search?q=${encodeURIComponent(query)}&type=${statsSelectedType}&sport=${activeSport}`);
+    // Respuesta vieja (el usuario siguió escribiendo o cambió de pestaña):
+    // se descarta sin tocar el DOM.
+    if (mySeq !== statsRequestSeq) return;
+    if (document.getElementById('stats-query')?.value !== query) return;
     if (!results.length) {
       suggestionsBox.innerHTML = `<div class="stats-suggestion-empty">${t('stats.noMatches')}</div>`;
       suggestionsBox.classList.remove('hidden');
@@ -348,6 +357,8 @@ async function selectStatsResult(type, id, label) {
 }
 
 function resetStatsSearch() {
+  clearTimeout(statsDebounceTimer);
+  statsRequestSeq++; // invalida cualquier fetch en vuelo
   const input = document.getElementById('stats-query');
   const suggestionsBox = document.getElementById('stats-suggestions');
   const resultEl = document.getElementById('stats-result');
@@ -379,6 +390,8 @@ function initStatsSearch() {
 
   typeSelect.addEventListener('change', (e) => {
     statsSelectedType = e.target.value;
+    clearTimeout(statsDebounceTimer);
+    statsRequestSeq++; // invalida cualquier fetch en vuelo (era del otro tipo)
     input.value = '';
     document.getElementById('stats-suggestions').classList.add('hidden');
     input.placeholder = t(statsSelectedType === 'team' ? 'stats.placeholderTeam' : 'stats.placeholderPlayer');

@@ -593,6 +593,20 @@ function initSportTabs() {
 
 document.addEventListener('bfb:language-changed', () => loadSportSection(activeSport));
 
+// Tras login/logout/registro el estado de usuario cambia: las tarjetas ya
+// pintadas (botones de predecir, estrellas de favorito) quedarían con el
+// estado anterior. Se re-renderizan partidos + posiciones de la liga activa
+// (noticias/stats no dependen de la sesión).
+document.addEventListener('bfb:user-changed', () => {
+  if (!activeLeague) return;
+  const dateInput = document.getElementById('games-date-input');
+  renderGamesSection(activeLeague, dateInput?.value || null);
+  const standingsSection = document.getElementById('standings-section');
+  if (standingsSection && !standingsSection.classList.contains('hidden')) {
+    renderStandings(activeLeague);
+  }
+});
+
 async function initApp() {
   await initI18n();
   initAuth();
