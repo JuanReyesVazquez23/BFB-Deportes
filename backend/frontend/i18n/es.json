@@ -117,7 +117,9 @@
   },
   "common": {
     "comingSoon": "La temporada de esta liga no ha comenzado todavía.",
-    "noGamesToday": "No hay partidos programados para hoy en esta liga. Puede ser que la temporada aún no haya comenzado.",
+    "noGamesToday": "No hay partidos en esta fecha para esta liga.",
+    "newsEmpty": "No hay noticias disponibles por ahora.",
+    "tickerEmpty": "Sin partidos en este momento.",
     "standingsUnavailable": "Las posiciones de esta liga todavía no están disponibles.",
     "league": "Liga",
     "loading": "Cargando...",

@@ -118,7 +118,9 @@
   "common": {
     "league": "League",
     "comingSoon": "This league's season hasn't started yet.",
-    "noGamesToday": "No games scheduled today for this league. The season may not have started yet.",
+    "noGamesToday": "No games on this date for this league.",
+    "newsEmpty": "No news available right now.",
+    "tickerEmpty": "No games right now.",
     "standingsUnavailable": "Standings for this league aren't available yet.",
     "loading": "Loading...",
     "error": "Something went wrong while loading data.",

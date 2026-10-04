@@ -9,7 +9,7 @@ const i18nState = {
   dict: {},
 };
 
-const I18N_VERSION = '20260903-2';
+const I18N_VERSION = '20261004';
 
 async function loadDictionary(lang) {
   const res = await fetch(`i18n/${lang}.json?v=${I18N_VERSION}`);

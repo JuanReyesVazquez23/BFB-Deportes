@@ -126,7 +126,7 @@ async function renderNews(sportKey) {
     // cobertura reciente (relevancia real por menciones), no solo la más nueva.
     const articles = await api.get(`/news/${sportKey}?sort=trending&lang=${i18nState.lang}`);
     if (!articles.length) {
-      container.innerHTML = `<p class="empty-state">${t('common.comingSoon')}</p>`;
+      container.innerHTML = `<p class="empty-state">${t('common.newsEmpty')}</p>`;
       return;
     }
     container.innerHTML = articles
@@ -244,7 +244,7 @@ function pointsLostFromProbability(p) {
 function renderTicker(games) {
   const track = document.getElementById('ticker-track');
   if (!games || !games.length) {
-    track.innerHTML = `<span class="ticker-item">${t('common.comingSoon')}</span>`;
+    track.innerHTML = `<span class="ticker-item">${t('common.tickerEmpty')}</span>`;
     return;
   }
 

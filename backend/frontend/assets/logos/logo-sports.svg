@@ -13,10 +13,10 @@
     </filter>
   </defs>
   
-  <text x="10" y="40" fill="#0a0a0c" font-family="Anton, sans-serif" font-size="36" font-weight="bold" letter-spacing="0.02">B</text>
-  <text x="50" y="40" fill="#ffc400" font-family="Anton, sans-serif" font-size="36" font-weight="bold" letter-spacing="0.02">F</text>
-  <text x="95" y="40" fill="#0a0a0c" font-family="Anton, sans-serif" font-size="36" font-weight="bold" letter-spacing="0.02">B</text>
-  <text x="140" y="40" fill="#ffc400" font-family="Anton, sans-serif" font-size="36" font-weight="bold" letter-spacing="0.02">DEPORTES</text>
+  <text x="10" y="36" fill="#f5f3ee" font-family="Anton, sans-serif" font-size="34" font-weight="bold" letter-spacing="0.02">B</text>
+  <text x="38" y="36" fill="#ffc400" font-family="Anton, sans-serif" font-size="34" font-weight="bold" letter-spacing="0.02">F</text>
+  <text x="62" y="36" fill="#f5f3ee" font-family="Anton, sans-serif" font-size="34" font-weight="bold" letter-spacing="0.02">B</text>
+  <text x="10" y="54" fill="#9a9a9e" font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="0.32em">DEPORTES</text>
   
   <!-- Baseball detail on first B -->
   <path d="M42 28 Q50 10 Q58 28 H42 Z" fill="#ffc400" opacity="0.3"/>

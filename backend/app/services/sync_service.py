@@ -632,31 +632,20 @@ async def sync_basketball_league(league_key: str) -> None:
             await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
             # Ventana ayer -> +7 días en UN request (start_date/end_date),
             # para que haya "próximos" que predecir y no solo lo de hoy.
-            # Se pide dos veces: la API EXCLUYE la pretemporada por defecto,
-            # y en octubre (solo pretemporada) sin el segundo request
-            # llegan 0 partidos.
+            # Solo temporada (sin season_type): la API excluye la
+            # pretemporada por defecto, que es justo lo que se quiere —
+            # en la página solo aparecen partidos de temporada.
             start_day = datetime.now(timezone.utc).date() - timedelta(days=1)
             end_day = datetime.now(timezone.utc).date() + timedelta(days=7)
-            seen_game_ids: set[str] = set()
-            games_payloads: list[dict] = []
-            for season_type in (None, "preseason"):
-                games_data = await balldontlie_service.get_games(
-                    league_key, start_day, end_date=end_day, season_type=season_type
-                )
-                fetched = games_data.get("data", [])
-                logger.info(
-                    "NBA: %d partido(s) en ventana %s..%s (season_type=%s).",
-                    len(fetched),
-                    start_day.isoformat(),
-                    end_day.isoformat(),
-                    season_type or "default",
-                )
-                for game_data in fetched:
-                    gid = str(game_data.get("id"))
-                    if gid not in seen_game_ids:
-                        seen_game_ids.add(gid)
-                        games_payloads.append(game_data)
-                await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
+            games_data = await balldontlie_service.get_games(league_key, start_day, end_date=end_day)
+            games_payloads = games_data.get("data", [])
+            logger.info(
+                "NBA: %d partido(s) de temporada en ventana %s..%s.",
+                len(games_payloads),
+                start_day.isoformat(),
+                end_day.isoformat(),
+            )
+            await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
             for game_data in games_payloads:
                 external_id = str(game_data["id"])
                 home_info = game_data["home_team"]
