@@ -314,16 +314,32 @@ def _process_mlb_schedule(db, league, schedule: dict) -> None:
             game.last_synced_at = datetime.now(timezone.utc)
 
 
-def _interpret_basketball_status(raw_status: str) -> tuple[str, str | None]:
+def _interpret_basketball_status(raw_status: str, status_state: str | None = None) -> tuple[str, str | None]:
     """
-    Traduce el campo "status" de balldontlie (NBA/WNBA/NCAAB) a nuestro
-    estado interno. Confirmado con ejemplos reales de su documentación:
+    Traduce el estado de balldontlie (NBA/WNBA/NCAAB) a nuestro estado
+    interno. Desde 2025 la API trae el campo normalizado "status_state"
+    (scheduled|in_progress|final|postponed|canceled|delayed|suspended —
+    ver https://www.balldontlie.io/openapi/nba.yml), que se prefiere
+    cuando viene; si no, se usa la heurística original sobre "status":
     - "Final" -> partido terminado.
     - Una fecha/hora ISO (ej. "2025-12-08T00:00:00Z") -> el partido no ha
       empezado; ese valor es la hora de inicio, no un estado.
     - Cualquier otro texto (ej. "2nd Qtr", "Halftime") -> en vivo, y ya
       viene en formato legible para mostrarlo tal cual.
     """
+    if status_state:
+        normalized = status_state.strip().lower()
+        if normalized == "final":
+            return "final", None
+        if normalized in ("scheduled", "postponed", "delayed", "suspended"):
+            return "scheduled", None
+        if normalized in ("canceled", "abandoned"):
+            # No se va a jugar: se marca final sin marcador para que no
+            # quede como "próximo" para siempre (el recompute ignora
+            # partidos sin marcador, así que no afecta récords).
+            return "final", None
+        # in_progress / unknown con marcador en juego -> en vivo.
+        return "live", raw_status or None
     if raw_status == "Final":
         return "final", None
     try:
@@ -614,9 +630,34 @@ async def sync_basketball_league(league_key: str) -> None:
             # gratis permite 5 peticiones/minuto: espaciar solo entre ligas
             # (y no entre las 2 llamadas de cada liga) no alcanzaba.
             await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
-            target_date = datetime.now(timezone.utc).date()
-            games_data = await balldontlie_service.get_games(league_key, target_date)
-            for game_data in games_data.get("data", []):
+            # Ventana ayer -> +7 días en UN request (start_date/end_date),
+            # para que haya "próximos" que predecir y no solo lo de hoy.
+            # Se pide dos veces: la API EXCLUYE la pretemporada por defecto,
+            # y en octubre (solo pretemporada) sin el segundo request
+            # llegan 0 partidos.
+            start_day = datetime.now(timezone.utc).date() - timedelta(days=1)
+            end_day = datetime.now(timezone.utc).date() + timedelta(days=7)
+            seen_game_ids: set[str] = set()
+            games_payloads: list[dict] = []
+            for season_type in (None, "preseason"):
+                games_data = await balldontlie_service.get_games(
+                    league_key, start_day, end_date=end_day, season_type=season_type
+                )
+                fetched = games_data.get("data", [])
+                logger.info(
+                    "NBA: %d partido(s) en ventana %s..%s (season_type=%s).",
+                    len(fetched),
+                    start_day.isoformat(),
+                    end_day.isoformat(),
+                    season_type or "default",
+                )
+                for game_data in fetched:
+                    gid = str(game_data.get("id"))
+                    if gid not in seen_game_ids:
+                        seen_game_ids.add(gid)
+                        games_payloads.append(game_data)
+                await asyncio.sleep(BALLDONTLIE_CALL_SPACING_SECONDS)
+            for game_data in games_payloads:
                 external_id = str(game_data["id"])
                 home_info = game_data["home_team"]
                 away_info = game_data["visitor_team"]
@@ -655,7 +696,9 @@ async def sync_basketball_league(league_key: str) -> None:
                     )
                     db.add(game)
 
-                status, period_status = _interpret_basketball_status(str(game_data.get("status", "")))
+                status, period_status = _interpret_basketball_status(
+                    str(game_data.get("status", "")), game_data.get("status_state")
+                )
                 game.status = status
                 game.period_status = period_status
                 game.home_score = game_data.get("home_team_score")

@@ -95,11 +95,31 @@ def _headers() -> dict:
     return {"Authorization": settings.BALLDONTLIE_API_KEY}
 
 
-async def get_games(league_key: str, target_date: date) -> dict:
+async def get_games(
+    league_key: str,
+    target_date: date,
+    end_date: date | None = None,
+    season_type: str | None = None,
+) -> dict:
+    """
+    Partidos de basketball. Por defecto trae UN día (dates[]=target_date).
+
+    - Si se pasa end_date, usa start_date/end_date (UN SOLO request para
+      todo el rango — ver spec /nba/v1/games), en vez de un request por día.
+    - season_type: "preseason" trae pretemporada. OJO: si se omite, la API
+      devuelve todo EXCEPTO pretemporada (confirmado en el OpenAPI
+      https://www.balldontlie.io/openapi/nba.yml) — en octubre, cuando solo
+      hay pretemporada, hay que pedirla explícita o llegan 0 partidos.
+    """
     path = LEAGUE_PATHS[league_key]
     endpoint = _games_endpoint(league_key)
     url = f"{settings.BALLDONTLIE_API_BASE}/{path}/{_api_version(league_key)}/{endpoint}"
-    params = {"dates[]": target_date.isoformat()}
+    if end_date is not None:
+        params = {"start_date": target_date.isoformat(), "end_date": end_date.isoformat()}
+    else:
+        params = {"dates[]": target_date.isoformat()}
+    if season_type is not None:
+        params["season_type"] = season_type
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         resp = await client.get(url, params=params, headers=_headers())
         resp.raise_for_status()
