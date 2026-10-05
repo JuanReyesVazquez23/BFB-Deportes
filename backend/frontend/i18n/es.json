@@ -1,25 +1,19 @@
 {
-  "tagline": "Béisbol · Fútbol · Basketball — todo en un mismo lugar",
+  "tagline": "MLB en vivo — posiciones, pitchers, noticias y predicciones",
   "header": {
-    "liveDesk": "Centro de datos deportivos",
-    "kicker": "Tu tablero deportivo",
-    "summaryLabel": "Todo el juego, en un lugar",
-    "summaryTitle": "Sigue la acción sin perder el ritmo",
-    "summaryText": "Resultados, noticias y estadísticas de las ligas que importan.",
+    "liveDesk": "Centro de datos MLB",
+    "kicker": "Tu tablero de béisbol",
+    "summaryLabel": "Toda la temporada, en un lugar",
+    "summaryTitle": "Sigue cada lanzamiento sin perder el ritmo",
+    "summaryText": "Resultados, noticias y estadísticas de las Grandes Ligas.",
     "liveScores": "Marcadores y calendario",
     "liveScoresDetail": "Partidos y resultados actualizados",
     "insights": "Datos para seguir el juego",
     "insightsDetail": "Equipos, jugadores y posiciones",
     "predictions": "Pon tu pronóstico",
-    "predictionsDetail": "Convierte tus lecturas en puntos BFB",
-    "chooseSport": "Explora por deporte",
-    "chooseSportDetail": "Selecciona una liga para ver la jornada."
-  },
-  "nav": {
-    "baseball": "Béisbol",
-    "football": "Fútbol",
-    "basketball": "NBA",
-    "worldcup": "Mundial 2026"
+    "predictionsDetail": "Convierte tus lecturas en puntos Strike",
+    "leagueNow": "Liga en pantalla",
+    "leagueNowDetail": "Toda la temporada de las Grandes Ligas, en un solo lugar."
   },
   "auth": {
     "login": "Iniciar sesión",
@@ -32,7 +26,7 @@
     "hasAccount": "¿Ya tienes cuenta?",
     "createOne": "Regístrate",
     "loginInstead": "Inicia sesión",
-    "points": "pts BFB"
+    "points": "pts Strike"
   },
   "sections": {
     "standings": "Posiciones",
@@ -55,7 +49,7 @@
     "losingPitcher": "Pitcher perdedor",
     "savePitcher": "Salvamento",
     "probablePitcher": "Pitcher probable",
-    "predict": "Predice y gana puntos BFB",
+    "predict": "Predice y gana puntos Strike",
     "loginToPredict": "Inicia sesión para predecir",
     "predicted": "Ya predijiste este partido",
     "outs": "Outs",
@@ -82,20 +76,6 @@
     "noMatches": "No se encontraron resultados.",
     "battingStats": "Estadísticas de bateo (temporada actual)",
     "pitchingStats": "Estadísticas de pitcheo (temporada actual)",
-    "soccerStats": "Estadísticas de la temporada",
-    "goals": "Goles",
-    "assists": "Asistencias",
-    "points": "Puntos",
-    "rebounds": "Rebotes",
-    "steals": "Robos",
-    "blocks": "Bloqueos",
-    "gamesPlayed": "Partidos jugados",
-    "seasonStats": "Temporada actual (promedios)",
-    "careerStats": "Carrera (promedios)",
-    "minutes": "Minutos jugados",
-    "yellowCards": "Tarjetas amarillas",
-    "redCards": "Tarjetas rojas",
-    "avgRating": "Calificación promedio",
     "avg": "Promedio",
     "homeRuns": "Jonrones",
     "hits": "Hits",
@@ -113,7 +93,8 @@
     "comparePlayersToggle": "Comparar 2 jugadores",
     "compareTeamsToggle": "Comparar 2 equipos",
     "compareFirstPicked": "Elegiste",
-    "compareNowPickSecond": "Ahora busca al segundo jugador."
+    "compareNowPickSecond": "Ahora busca al segundo jugador.",
+    "compareNowPickSecondTeam": "Ahora busca al segundo equipo."
   },
   "common": {
     "comingSoon": "La temporada de esta liga no ha comenzado todavía.",

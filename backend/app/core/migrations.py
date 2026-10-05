@@ -40,6 +40,13 @@ _LIGHTWEIGHT_MIGRATIONS = [
     "ALTER TABLE players ADD COLUMN IF NOT EXISTS nba_stats_person_id VARCHAR(20)",
     "ALTER TABLE teams ADD COLUMN IF NOT EXISTS roster_synced_at TIMESTAMPTZ",
     "ALTER TABLE leagues ADD COLUMN IF NOT EXISTS sync_enabled BOOLEAN NOT NULL DEFAULT true",
+    # StrikeHub (solo MLB): columnas de fútbol/basket que ya no usa ningún
+    # código. Se eliminan si existen; IF EXISTS lo hace seguro en BD nuevas.
+    "ALTER TABLE players DROP COLUMN IF EXISTS goals",
+    "ALTER TABLE players DROP COLUMN IF EXISTS assists",
+    "ALTER TABLE players DROP COLUMN IF EXISTS nba_stats_person_id",
+    "ALTER TABLE teams DROP COLUMN IF EXISTS roster_synced_at",
+    "ALTER TABLE leagues DROP COLUMN IF EXISTS provider_league_path",
 ]
 
 

@@ -44,9 +44,9 @@ async function checkForNewPredictionResults() {
   unseen.forEach((p) => {
     const matchup = formatMatchup(p);
     if (p.status === 'correct') {
-      showToast(`¡Ganaste! Acertaste ${p.predicted_team?.name || 'tu equipo'} en ${matchup} (+${p.points_awarded} BFB points)`, 'success');
+      showToast(`¡Ganaste! Acertaste ${p.predicted_team?.name || 'tu equipo'} en ${matchup} (+${p.points_awarded} puntos Strike)`, 'success');
     } else {
-      showToast(`Perdiste tu predicción de ${p.predicted_team?.name || ''} en ${matchup} (${p.points_awarded} BFB points)`, 'error');
+      showToast(`Perdiste tu predicción de ${p.predicted_team?.name || ''} en ${matchup} (${p.points_awarded} puntos Strike)`, 'error');
     }
   });
 

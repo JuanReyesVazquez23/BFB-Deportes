@@ -29,7 +29,7 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 async def _background_sync_loop() -> None:
-    """Refresca los datos deportivos periódicamente."""
+    """Refresca los datos de MLB periódicamente."""
     while True:
         try:
             await run_full_sync()
@@ -49,7 +49,8 @@ def _run_background_sync_loop_in_thread() -> None:
     estaba antes, con asyncio.create_task), cada consulta a la base de datos
     bloquea TODO el servidor mientras dura — nadie puede registrarse, iniciar
     sesión ni cargar ninguna página mientras el ciclo de sincronización está
-    corriendo (varios minutos, entre MLB + NBA + 6 ligas de fútbol). En un
+    corriendo (la sincronización de MLB tarda varios minutos entre equipos,
+    partidos y rosters). En un
     hilo aparte, el servidor sigue respondiendo con normalidad sin importar
     cuánto tarde la sincronización.
     """

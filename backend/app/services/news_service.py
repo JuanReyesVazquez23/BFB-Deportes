@@ -24,8 +24,6 @@ from app.services.http_client import DEFAULT_HTTP_TIMEOUT as TIMEOUT
 
 FEEDS_BY_SPORT = {
     "baseball": settings.NEWS_RSS_MLB,
-    "basketball": settings.NEWS_RSS_NBA,
-    "football": settings.NEWS_RSS_SOCCER,
 }
 
 # Busca el primer <img src="..."> dentro de HTML (algunos feeds de ESPN
@@ -109,5 +107,5 @@ async def fetch_general_baseball_news(limit: int = 10) -> list[dict]:
 
 
 async def fetch_general_news(sport_key: str, limit: int = 10) -> list[dict]:
-    feed_url = FEEDS_BY_SPORT.get(sport_key, settings.NEWS_RSS_GENERAL)
+    feed_url = FEEDS_BY_SPORT.get(sport_key, settings.NEWS_RSS_MLB)
     return await fetch_rss_news(feed_url, limit=limit)

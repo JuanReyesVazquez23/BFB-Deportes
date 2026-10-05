@@ -2,5 +2,5 @@
 import httpx
 
 # Timeout usado por todos los servicios que llaman APIs externas
-# (MLB Stats API, balldontlie, football-data.org, RSS de noticias).
+# (MLB Stats API, RSS de noticias de ESPN).
 DEFAULT_HTTP_TIMEOUT = httpx.Timeout(10.0, connect=5.0)

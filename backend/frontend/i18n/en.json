@@ -1,25 +1,19 @@
 {
-  "tagline": "Baseball · Football · Basketball — all in one place",
+  "tagline": "MLB live — standings, pitchers, news, and predictions",
   "header": {
-    "liveDesk": "Sports data center",
-    "kicker": "Your sports dashboard",
-    "summaryLabel": "Every game, in one place",
-    "summaryTitle": "Follow the action without missing a beat",
-    "summaryText": "Results, news, and stats from the leagues that matter.",
+    "liveDesk": "MLB data center",
+    "kicker": "Your baseball dashboard",
+    "summaryLabel": "The whole season, in one place",
+    "summaryTitle": "Follow every pitch without missing a beat",
+    "summaryText": "Results, news, and stats from the Major Leagues.",
     "liveScores": "Scores and schedule",
     "liveScoresDetail": "Updated games and results",
     "insights": "Data to follow the game",
     "insightsDetail": "Teams, players, and standings",
     "predictions": "Make your prediction",
-    "predictionsDetail": "Turn your reads into BFB points",
-    "chooseSport": "Explore by sport",
-    "chooseSportDetail": "Choose a league to see the matchday."
-  },
-  "nav": {
-    "baseball": "Baseball",
-    "football": "Football",
-    "basketball": "NBA",
-    "worldcup": "World Cup 2026"
+    "predictionsDetail": "Turn your reads into Strike points",
+    "leagueNow": "League on screen",
+    "leagueNowDetail": "The entire Major League season, in one place."
   },
   "auth": {
     "login": "Log in",
@@ -32,7 +26,7 @@
     "hasAccount": "Already have an account?",
     "createOne": "Sign up",
     "loginInstead": "Log in",
-    "points": "BFB pts"
+    "points": "Strike pts"
   },
   "sections": {
     "standings": "Standings",
@@ -55,7 +49,7 @@
     "losingPitcher": "Losing pitcher",
     "savePitcher": "Save",
     "probablePitcher": "Probable pitcher",
-    "predict": "Predict and earn BFB points",
+    "predict": "Predict and earn Strike points",
     "loginToPredict": "Log in to predict",
     "predicted": "You already predicted this game",
     "outs": "Outs",
@@ -82,20 +76,6 @@
     "noMatches": "No matches found.",
     "battingStats": "Batting stats (current season)",
     "pitchingStats": "Pitching stats (current season)",
-    "soccerStats": "Season stats",
-    "goals": "Goals",
-    "assists": "Assists",
-    "points": "Points",
-    "rebounds": "Rebounds",
-    "steals": "Steals",
-    "blocks": "Blocks",
-    "gamesPlayed": "Games played",
-    "seasonStats": "Current season (averages)",
-    "careerStats": "Career (averages)",
-    "minutes": "Minutes played",
-    "yellowCards": "Yellow cards",
-    "redCards": "Red cards",
-    "avgRating": "Average rating",
     "avg": "AVG",
     "homeRuns": "Home Runs",
     "hits": "Hits",
@@ -113,7 +93,8 @@
     "comparePlayersToggle": "Compare 2 players",
     "compareTeamsToggle": "Compare 2 teams",
     "compareFirstPicked": "You picked",
-    "compareNowPickSecond": "Now search for the second player."
+    "compareNowPickSecond": "Now search for the second player.",
+    "compareNowPickSecondTeam": "Now search for the second team."
   },
   "common": {
     "league": "League",

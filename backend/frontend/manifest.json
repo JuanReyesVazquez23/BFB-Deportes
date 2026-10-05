@@ -1,7 +1,7 @@
 {
-  "name": "BFB Deportes",
-  "short_name": "BFB Deportes",
-  "description": "Béisbol, Fútbol y Basketball, todo en un mismo lugar.",
+  "name": "StrikeHub",
+  "short_name": "StrikeHub",
+  "description": "MLB en vivo — posiciones, pitchers, noticias y predicciones.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b0b0c",

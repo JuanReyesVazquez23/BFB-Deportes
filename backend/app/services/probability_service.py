@@ -1,27 +1,22 @@
 """
-Cálculo de probabilidad de victoria y de los puntos BFB otorgados por
+Cálculo de probabilidad de victoria y de los puntos Strike otorgados por
 predicción acertada.
 
 Regla de negocio (actualizada — antes no se perdían puntos al fallar):
 - Cada partido no iniciado muestra una barra de probabilidad de victoria.
 - Si el usuario predice correctamente, gana entre BET_MIN_POINTS y
-  BET_MAX_POINTS puntos BFB. Entre más probable era que el equipo elegido
-  ganara, MENOS puntos se otorgan; entre menos probable era, MÁS puntos.
+BET_MAX_POINTS puntos Strike. Entre más probable era que el equipo elegido
+ganara, MENOS puntos se otorgan; entre menos probable era, MÁS puntos.
 - Si el usuario predice incorrectamente, PIERDE puntos: al revés que al
-  acertar, entre más probable era que el equipo elegido ganara, MÁS puntos
-  se pierden (una sorpresa grande sale más cara); entre menos probable era
-  (una apuesta arriesgada), MENOS puntos se pierden, ya que perder era lo
-  más esperable. Los puntos del usuario nunca bajan de 0.
+acertar, entre más probable era que el equipo elegido ganara, MÁS puntos
+se pierden (una sorpresa grande sale más cara); entre menos probable era
+(una apuesta arriesgada), MENOS puntos se pierden, ya que perder era lo
+más esperable. Los puntos del usuario nunca bajan de 0.
 
-Fuente de la probabilidad:
-1) Si el proveedor de datos ofrece cuotas/odds reales (ej. balldontlie en
-   sus planes con datos extendidos), se debe preferir esa probabilidad
-   implícita real.
-2) Si no hay cuotas disponibles (caso por defecto, ej. MLB Stats API no
-   expone odds), se usa una heurística basada en el porcentaje de
-   victorias de cada equipo más una ventaja de localía. Esto es una
-   ESTIMACIÓN, no una probabilidad de casa de apuestas real, y así debe
-   comunicarse en la interfaz ("probabilidad estimada").
+Fuente de la probabilidad: heurística basada en el porcentaje de victorias
+de cada equipo más una ventaja de localía (MLB Stats API no expone odds).
+Esto es una ESTIMACIÓN, no una probabilidad de casa de apuestas real, y
+así debe comunicarse en la interfaz ("probabilidad estimada").
 """
 from app.core.config import settings
 
@@ -103,7 +98,7 @@ def _skew_probability_for_points(p: float, strength: float = POINTS_CURVE_STRENG
 
 def points_for_prediction(probability_of_chosen_team: float) -> int:
     """
-    Traduce la probabilidad del equipo elegido en puntos BFB otorgados si
+    Traduce la probabilidad del equipo elegido en puntos Strike otorgados si
     la predicción fue correcta.
 
     probability = 0.95 (muy probable que gane) -> puntos cercanos al mínimo

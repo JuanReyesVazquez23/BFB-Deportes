@@ -4,31 +4,13 @@
  * (en vivo / finalizados / próximos con barra de probabilidad).
  */
 
-// Liga principal que se muestra por defecto al entrar a cada deporte.
-// El selector de liga (junto a las pestañas) permite cambiarla en vivo.
-const PRIMARY_LEAGUE_BY_SPORT = {
-  baseball: 'mlb',
-  football: 'epl',
-  basketball: 'nba',
-};
-
-const NEWS_SPORT_BY_TAB = {
-  baseball: 'baseball',
-  football: 'football',
-  basketball: 'basketball',
-};
-
-const SPORT_READY = {
-  // La MLB corre sobre la API oficial gratuita: funciona sin configuración adicional.
-  baseball: true,
-  // Ya construido y conectado a balldontlie. Si no ves datos, confirma en los
-  // logs de Railway que BALLDONTLIE_API_KEY esté configurada y que el primer
-  // ciclo de sincronización (cada 5 min) ya haya corrido.
-  football: true,
-  basketball: true,
-};
-
-let activeSport = 'baseball';
+/**
+ * StrikeHub es solo MLB: una única liga ('mlb'), sin pestañas de deporte.
+ * activeLeague existe para conservar la fecha elegida entre re-renders.
+ */
+const LEAGUE_KEY = 'mlb';
+const SPORT_KEY = 'baseball';
+let activeLeague = LEAGUE_KEY;
 
 function formatDate(iso) {
   return new Date(iso).toLocaleString(i18nState.lang === 'es' ? 'es-ES' : 'en-US', {
@@ -485,63 +467,17 @@ async function toggleFavorite(star, type, id) {
   }
 }
 
-/* ---------------------- Cambio de pestaña de deporte ---------------------- */
-let activeLeague = null;
-
-/**
- * Llena el selector de liga con las ligas reales del deporte activo
- * (endpoint /sports/{sport_key}/leagues). Si solo hay una liga disponible,
- * el selector se oculta (no tiene sentido "elegir" si no hay opciones).
- * Devuelve la liga que debe cargarse (la marcada is_primary, o la primera).
- */
-async function populateLeagueSelector(sportKey) {
-  const row = document.querySelector('.league-select-row');
-  const select = document.getElementById('league-select');
-
-  try {
-    const leagues = await api.get(`/sports/${sportKey}/leagues`);
-    if (leagues.length <= 1) {
-      row.classList.add('hidden');
-      return leagues[0]?.key || PRIMARY_LEAGUE_BY_SPORT[sportKey];
-    }
-
-    row.classList.remove('hidden');
-    select.innerHTML = leagues.map((l) => `<option value="${esc(l.key)}">${esc(l.name)}</option>`).join('');
-    const primary = leagues.find((l) => l.is_primary) || leagues[0];
-    select.value = primary.key;
-    return primary.key;
-  } catch (err) {
-    row.classList.add('hidden');
-    return PRIMARY_LEAGUE_BY_SPORT[sportKey];
-  }
-}
-
-async function loadLeagueData(leagueKey) {
+/* ---------------------- Carga de la liga (MLB) ---------------------- */
+async function loadLeagueData(leagueKey = LEAGUE_KEY) {
   activeLeague = leagueKey;
   const dateInput = document.getElementById('games-date-input');
   if (dateInput) dateInput.value = '';
 
-  const standingsSection = document.getElementById('standings-section');
-  const playersSection = document.getElementById('players-today-section');
-
-  // El Mundial es por grupos, no tabla de liga tradicional: no se muestran posiciones.
-  const hideStandings = leagueKey === 'world_cup';
-  standingsSection.classList.toggle('hidden', hideStandings);
-
-  // "Jugadores Hoy" (pitchers probables) solo aplica a béisbol.
-  const hidePlayersToday = activeSport !== 'baseball';
-  playersSection.classList.toggle('hidden', hidePlayersToday);
-
-  const tasks = [renderGamesSection(leagueKey)];
-  if (!hideStandings) tasks.push(renderStandings(leagueKey));
-  if (!hidePlayersToday) tasks.push(renderPlayersToday(leagueKey));
-  await Promise.all(tasks);
-}
-
-function initLeagueSelector() {
-  document.getElementById('league-select').addEventListener('change', (e) => {
-    loadLeagueData(e.target.value);
-  });
+  await Promise.all([
+    renderGamesSection(leagueKey),
+    renderStandings(leagueKey),
+    renderPlayersToday(leagueKey),
+  ]);
 }
 
 function initDateSearch() {
@@ -558,40 +494,13 @@ function initDateSearch() {
   });
 }
 
-async function loadSportSection(sportKey) {
-  activeSport = sportKey;
-  document.querySelectorAll('.sport-tab').forEach((tab) => {
-    tab.classList.toggle('active', tab.dataset.sport === sportKey);
-  });
+async function loadMainContent() {
   resetStatsSearch();
-
-  const isReady = SPORT_READY[sportKey];
-
-  await renderNews(NEWS_SPORT_BY_TAB[sportKey]); // las noticias generales del deporte siempre se muestran
-
-  if (!isReady) {
-    document.querySelector('.league-select-row').classList.add('hidden');
-    document.getElementById('standings-section').classList.remove('hidden');
-    document.getElementById('players-today-section').classList.remove('hidden');
-    ['standings-container', 'players-today-container', 'games-container'].forEach((id) => {
-      document.getElementById(id).innerHTML = `<p class="empty-state">${t('common.comingSoon')}</p>`;
-    });
-    renderTicker([]);
-    stopLivePolling();
-    return;
-  }
-
-  const leagueKey = await populateLeagueSelector(sportKey);
-  await loadLeagueData(leagueKey);
+  await renderNews(SPORT_KEY);
+  await loadLeagueData(LEAGUE_KEY);
 }
 
-function initSportTabs() {
-  document.querySelectorAll('.sport-tab').forEach((tab) => {
-    tab.addEventListener('click', () => loadSportSection(tab.dataset.sport));
-  });
-}
-
-document.addEventListener('bfb:language-changed', () => loadSportSection(activeSport));
+document.addEventListener('bfb:language-changed', () => loadMainContent());
 
 // Tras login/logout/registro el estado de usuario cambia: las tarjetas ya
 // pintadas (botones de predecir, estrellas de favorito) quedarían con el
@@ -610,11 +519,9 @@ document.addEventListener('bfb:user-changed', () => {
 async function initApp() {
   await initI18n();
   initAuth();
-  initSportTabs();
-  initLeagueSelector();
   initDateSearch();
   initStatsSearch();
-  await loadSportSection('baseball');
+  await loadMainContent();
 }
 
 document.addEventListener('DOMContentLoaded', initApp);

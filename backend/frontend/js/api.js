@@ -1,5 +1,5 @@
 /**
- * Cliente HTTP hacia el backend de BFB Deportes.
+ * Cliente HTTP hacia el backend de StrikeHub.
  *
  * - Usa `credentials: 'include'` para enviar/recibir la cookie httpOnly de
  *   sesión (ver backend/app/api/routes/auth.py). El token JWT nunca se toca

@@ -13,9 +13,6 @@ def list_sports(db: Session = Depends(get_db)):
     return db.query(Sport).all()
 
 
-DISABLED_LEAGUE_KEYS = {"wnba", "ncaab", "world_cup"}
-
-
 @router.get("/sports/{sport_key}/leagues", response_model=list[LeagueOut])
 def list_leagues(sport_key: str = Path(pattern=r"^[a-z_]{1,30}$"), db: Session = Depends(get_db)):
     sport = db.query(Sport).filter(Sport.key == sport_key).first()
@@ -23,7 +20,7 @@ def list_leagues(sport_key: str = Path(pattern=r"^[a-z_]{1,30}$"), db: Session =
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deporte no encontrado.")
     return (
         db.query(League)
-        .filter(League.sport_id == sport.id, League.key.notin_(DISABLED_LEAGUE_KEYS))
+        .filter(League.sport_id == sport.id)
         .order_by(League.is_primary.desc())
         .all()
     )

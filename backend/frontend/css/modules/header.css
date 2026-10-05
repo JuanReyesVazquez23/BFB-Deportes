@@ -217,13 +217,14 @@
   box-shadow: 0 0 8px rgba(255, 196, 0, 0.65);
 }
 
-/* Logo BFB: SVG inline (usa Anton/Inter ya cargadas en la página; un <img>
+/* Logo StrikeHub: SVG inline (usa Anton/Inter ya cargadas en la página; un <img>
    no podría usarlas porque el SVG quedaría aislado). */
 .logo-sports {
-  width: 248px;
+  width: 300px;
   height: 64px;
   display: block;
   margin: 4px 0 2px;
+  max-width: 100%;
 }
 
 .brand h1 {
@@ -363,71 +364,29 @@
 
 .header-navigation-controls {
   min-width: 0;
-}
-
-/* Tabs de deporte, con esquina cortada tipo señalética de estadio */
-.sport-tabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  padding: 14px 14px 0;
-  padding-bottom: 0;
-}
-
-.sport-tab {
-  font-family: var(--font-display);
-  letter-spacing: 0.03em;
-  font-size: 15px;
-  background: rgba(10, 10, 12, 0.5);
-  color: var(--bfb-muted);
-  border: 1px solid var(--bfb-border);
-  border-bottom: none;
-  padding: 12px 22px 10px;
-  cursor: pointer;
-  clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%);
-  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-}
-
-.sport-tab:hover {
-  color: var(--bfb-white);
-  transform: translateY(-2px);
-}
-
-.sport-tab.active {
-  background: linear-gradient(180deg, var(--bfb-yellow-bright), var(--bfb-yellow));
-  color: var(--bfb-black);
-  transform: translateY(-2px);
-  box-shadow: 0 -6px 20px rgba(255, 196, 0, 0.25);
-}
-
-.league-select-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-top: 1px solid var(--bfb-border);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--bfb-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  padding: 14px;
 }
 
-.league-select {
-  background: var(--bfb-surface);
+/* Insignia de liga única (StrikeHub es solo MLB, sin selector) */
+.league-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  letter-spacing: 0.04em;
   color: var(--bfb-white);
-  border: 1px solid var(--bfb-border);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  transition: border-color 0.15s ease;
 }
 
-.league-select:focus {
-  border-color: var(--bfb-yellow);
+.league-badge-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bfb-live);
+  box-shadow: 0 0 8px rgba(46, 204, 113, 0.7);
 }
 
 @media (max-width: 820px) {
@@ -536,24 +495,9 @@
     display: none;
   }
 
-  .sport-tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding: 12px 10px 0;
-    scrollbar-width: none;
-  }
-
-  .sport-tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .sport-tab {
-    flex: 0 0 auto;
-    padding: 11px 17px 9px;
-  }
-
-  .league-select-row {
-    padding: 10px;
+  .logo-sports {
+    width: 230px;
+    height: auto;
   }
 }
 

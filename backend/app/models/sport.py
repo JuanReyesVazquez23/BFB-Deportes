@@ -44,10 +44,8 @@ class League(Base):
 
     # Liga "estrella" que se muestra por defecto al entrar al deporte (MLB, NBA, etc.)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
-    # Fuente de datos usada para esta liga: "mlb_stats_api" o "balldontlie"
+    # Fuente de datos usada para esta liga: "mlb_stats_api".
     data_provider: Mapped[str] = mapped_column(String(30), nullable=False)
-    # Segmento de ruta usado por balldontlie (ej. "nba", "epl", "fifa"); nulo si no aplica.
-    provider_league_path: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
     # False = el panel de administración "borró" esta liga (ej. un evento ya
     # pasado, como un Mundial anterior). Mientras esté en False, ninguna
@@ -81,17 +79,11 @@ class Team(Base):
 
     wins: Mapped[int] = mapped_column(Integer, default=0)
     losses: Mapped[int] = mapped_column(Integer, default=0)
-    ties: Mapped[int] = mapped_column(Integer, default=0)  # aplica a fútbol
+    ties: Mapped[int] = mapped_column(Integer, default=0)
     win_pct: Mapped[float] = mapped_column(Float, default=0.0)
     division: Mapped[str | None] = mapped_column(String(60), nullable=True)
     conference: Mapped[str | None] = mapped_column(String(60), nullable=True)
     standings_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    # Solo NBA: última vez que se sincronizó el roster completo de este
-    # equipo contra balldontlie (ver sync_service.sync_basketball_rosters).
-    # Permite rotar entre todos los equipos con el tiempo (no solo rellenar
-    # los que tienen 0 jugadores), así también se corrige un roster que ya
-    # se había sincronizado mal antes (ej. con jugadores retirados).
-    roster_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (UniqueConstraint("league_id", "external_id", name="uq_team_league_external"),)
 
@@ -110,19 +102,6 @@ class Player(Base):
     position: Mapped[str | None] = mapped_column(String(30), nullable=True)
     jersey_number: Mapped[str | None] = mapped_column(String(5), nullable=True)
     photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    # Solo se llenan para jugadores de fútbol (vía el listado de goleadores
-    # de football-data.org). MLB y NBA no guardan estadísticas de jugador
-    # en esta tabla: MLB se consulta en vivo, y NBA no tiene una fuente
-    # gratuita de estadísticas todavía (ver balldontlie_service.py).
-    goals: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    assists: Mapped[int | None] = mapped_column(Integer, nullable=True)
-
-    # Solo para jugadores de NBA: el ID de stats.nba.com (DISTINTO al id
-    # interno de balldontlie que ya se usa como external_id). Se resuelve
-    # por nombre una vez sincronizado el roster — ver
-    # sync_service._match_nba_stats_ids. Es lo que permite pedir
-    # estadísticas reales de carrera/temporada a stats.nba.com.
-    nba_stats_person_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     __table_args__ = (UniqueConstraint("team_id", "external_id", name="uq_player_team_external"),)
 
@@ -198,8 +177,7 @@ class ExcludedTeam(Base):
 
     Por qué existe: borrar un equipo con el panel de admin no bastaba,
     porque la siguiente sincronización lo volvía a crear si la API externa
-    todavía lo reportaba (ej. balldontlie a veces marca como "vigente" algo
-    que en realidad no debería mostrarse). Esta tabla es la lista negra
+    todavía lo reportaba. Esta tabla es la lista negra
     definitiva: toda sincronización de equipos revisa aquí primero y se
     salta cualquier external_id que aparezca, sin importar qué diga la API
     sobre ese equipo. Es la única forma de que un borrado del panel de

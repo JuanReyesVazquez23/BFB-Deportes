@@ -1,5 +1,5 @@
 """
-Configuración central de BFB Deportes.
+Configuración central de StrikeHub.
 
 Todas las variables sensibles (contraseñas, claves de API, secretos JWT)
 se leen desde el entorno (.env) y NUNCA se escriben directamente en el código.
@@ -13,7 +13,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # --- General ---
-    PROJECT_NAME: str = "BFB Deportes"
+    PROJECT_NAME: str = "StrikeHub"
     API_V1_PREFIX: str = "/api/v1"
     ENV: str = "development"  # development | production
 
@@ -54,35 +54,13 @@ class Settings(BaseSettings):
     # MLB Stats API es oficial, gratuita y no requiere API key.
     MLB_STATS_API_BASE: str = "https://statsapi.mlb.com/api/v1"
 
-    # balldontlie.io cubre NBA, WNBA, NCAAB, NFL, NHL y varias ligas de fútbol
-    # (EPL, La Liga, Serie A, Bundesliga, Ligue 1, MLS, Champions League, Mundial).
-    # Requiere API key propia (nivel gratuito disponible). Se obtiene en https://balldontlie.io
-    BALLDONTLIE_API_BASE: str = "https://api.balldontlie.io"
-    BALLDONTLIE_API_KEY: str = ""
-
-    # football-data.org: fútbol (EPL, La Liga, Serie A, Bundesliga, Ligue 1,
-    # Champions League, Mundial). Gratis para siempre según su propio creador,
-    # 10 peticiones/minuto. Se obtiene en https://www.football-data.org/client/register
-    FOOTBALL_DATA_API_BASE: str = "https://api.football-data.org/v4"
-    FOOTBALL_DATA_API_KEY: str = ""
-
-    # API-Football (api-sports.io), endpoint directo (no RapidAPI): estadísticas
-    # detalladas de jugador de fútbol (goles, asistencias, tarjetas, calificación,
-    # minutos), que football-data.org no da en su plan gratuito (solo goleadores
-    # destacados). Plan gratuito: 100 peticiones/día, sin tarjeta. Se obtiene en
-    # https://www.api-football.com — la key va en el header x-apisports-key.
-    API_FOOTBALL_API_BASE: str = "https://v3.football.api-sports.io"
-    API_FOOTBALL_KEY: str = ""
-
     # --- Noticias (RSS oficiales, gratuitos, con imagen) ---
     NEWS_RSS_GENERAL: str = "https://www.espn.com/espn/rss/news"
     NEWS_RSS_MLB: str = "https://www.espn.com/espn/rss/mlb/news"
-    NEWS_RSS_NBA: str = "https://www.espn.com/espn/rss/nba/news"
-    NEWS_RSS_SOCCER: str = "https://www.espn.com/espn/rss/soccer/news"
     # Frecuencia mínima (minutos) entre refrescos de noticias por sección, para no saturar la fuente.
     NEWS_REFRESH_MINUTES: int = 15
 
-    # --- Sistema de puntos BFB (predicciones) ---
+    # --- Sistema de puntos Strike (predicciones) ---
     BET_MIN_POINTS: int = 2
     BET_MAX_POINTS: int = 20
     NEW_USER_STARTING_POINTS: int = 100

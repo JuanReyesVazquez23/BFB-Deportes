@@ -8,7 +8,7 @@
  * peticiones al backend responden 403. No hay una segunda contraseña; se
  * reutiliza la sesión que ya existe para favoritos/predicciones.
  */
-const ADMIN_LEAGUE_KEYS = ['mlb', 'nba', 'epl', 'laliga', 'seriea', 'bundesliga', 'ligue1', 'champions_league'];
+const ADMIN_LEAGUE_KEYS = ['mlb'];
 
 let adminTapCount = 0;
 let adminTapTimer = null;
