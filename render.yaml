@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: bfb-deportes
+    name: strikehub
     runtime: python
     plan: free
     rootDir: backend
