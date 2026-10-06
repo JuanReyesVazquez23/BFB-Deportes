@@ -5,7 +5,7 @@
 </p>
 
 ## Website Online:
-https://bfbdeportes.onrender.com (Render Free Plan)
+https://strikehub.onrender.com (Render Free Plan)
 
 <p align="center">
   <strong>La casa del béisbol: MLB en vivo, predicciones, estadísticas y noticias.</strong>
