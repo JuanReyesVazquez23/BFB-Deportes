@@ -445,9 +445,27 @@
 }
 
 @media (max-width: 640px) {
-  .scoreboard-row { grid-template-columns: 1fr auto 1fr; gap: 8px; }
-  .score-led { font-size: 20px; min-width: 60px; }
-  .team-name { font-size: 12px; }
+  /* Marcador: cada equipo en columna (nombre arriba, pastilla abajo) para
+     que nombre + LOCAL/VISITA + marcador no se aplasten entre sí. */
+  .scoreboard-row { grid-template-columns: 1fr auto 1fr; gap: 6px; }
+  .score-led { font-size: 20px; min-width: 0; padding: 6px 10px; }
+  .team-block { flex-direction: column; align-items: flex-start; gap: 5px; text-align: left; }
+  .team-block.away { flex-direction: column; align-items: flex-end; text-align: right; }
+  .team-block img { width: 26px; height: 26px; }
+  .team-name { font-size: 12px; line-height: 1.3; }
+  .team-role { font-size: 9px; }
+  .game-top-row { flex-wrap: wrap; gap: 6px; }
+  /* Posiciones: columnas numéricas más angostas + celdas compactas para
+     que el nombre del equipo no se parta en 3 líneas. */
+  .standings-table th:not(:first-child),
+  .standings-table td:not(:first-child) { width: 52px; }
+  .standings-table th,
+  .standings-table td { padding: 9px 10px; font-size: 12px; }
+  .team-cell { gap: 6px; }
+  /* Comparador: permite que las columnas respiren en pantallas angostas. */
+  .compare-header-row { gap: 8px; }
+  .compare-header-side h3 { font-size: 13px; }
+  .compare-value { font-size: 12px; }
 }
 
 /* ---------- Panel de administración (borrar equipos incorrectos) ---------- */
