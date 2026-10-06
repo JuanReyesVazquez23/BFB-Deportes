@@ -1,20 +1,5 @@
 {
   "tagline": "MLB live — standings, pitchers, news, and predictions",
-  "header": {
-    "liveDesk": "MLB data center",
-    "kicker": "Your baseball dashboard",
-    "summaryLabel": "The whole season, in one place",
-    "summaryTitle": "Follow every pitch without missing a beat",
-    "summaryText": "Results, news, and stats from the Major Leagues.",
-    "liveScores": "Scores and schedule",
-    "liveScoresDetail": "Updated games and results",
-    "insights": "Data to follow the game",
-    "insightsDetail": "Teams, players, and standings",
-    "predictions": "Make your prediction",
-    "predictionsDetail": "Turn your reads into Strike points",
-    "leagueNow": "League on screen",
-    "leagueNowDetail": "The entire Major League season, in one place."
-  },
   "auth": {
     "login": "Log in",
     "register": "Sign up",

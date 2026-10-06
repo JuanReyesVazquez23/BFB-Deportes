@@ -1,12 +1,7 @@
-/* ---------- Layout de secciones: orden jerárquico 01 En vivo > 02 Posiciones > 03 Stats > 04 Noticias.
-   La numeración es automática por CSS (sin tocar i18n): cada .section suma uno. ---------- */
-main.container {
-  counter-reset: bfb-section;
-}
-
+/* ---------- Layout de secciones: En vivo > Posiciones > Estadísticas > Noticias.
+   Solo texto y una línea divisoria; sin chips ni numeración decorativa. ---------- */
 .section {
-  counter-increment: bfb-section;
-  padding: 56px 0;
+  padding: 48px 0;
   border-bottom: 1px solid var(--bfb-border);
 }
 
@@ -18,24 +13,11 @@ main.container {
   font-family: var(--font-display);
   font-size: 26px;
   letter-spacing: 0.02em;
-  margin: 0 0 24px;
+  margin: 0 0 22px;
   display: flex;
   align-items: baseline;
-  gap: 12px;
-}
-
-/* Número de sección: chip monoespaciado, sin peso visual extra */
-.section-title::before {
-  content: counter(bfb-section, decimal-leading-zero);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--bfb-yellow);
-  border: 1px solid var(--bfb-border-bright);
-  border-radius: var(--radius-sm);
-  padding: 3px 8px;
-  letter-spacing: 0.08em;
-  transform: translateY(-3px);
+  flex-wrap: wrap;
+  gap: 4px 14px;
 }
 
 .section-title small {
@@ -89,7 +71,7 @@ main.container {
 
 @media (max-width: 900px) {
   .split-layout { grid-template-columns: 1fr; }
-  .section { padding: 40px 0; }
+  .section { padding: 36px 0; }
   .section-title { font-size: 22px; }
 }
 
@@ -109,24 +91,24 @@ main.container {
 
 .standings-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
+  table-layout: fixed;
   font-family: var(--font-mono);
   font-size: 13px;
-  background: var(--surface-gradient);
-  border: 1px solid var(--bfb-border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow-card);
+}
+
+/* Columnas numéricas con ancho fijo: así G / P / GB quedan alineadas entre grupos */
+.standings-table th:not(:first-child),
+.standings-table td:not(:first-child) {
+  width: 84px;
 }
 
 .standings-table th {
   text-align: left;
-  color: var(--bfb-yellow);
+  color: var(--bfb-muted);
   font-weight: 700;
-  padding: 11px 14px;
-  background: rgba(255, 196, 0, 0.06);
-  border-bottom: 1px solid var(--bfb-yellow-dim);
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--bfb-border-bright);
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: 0.06em;
@@ -139,10 +121,6 @@ main.container {
 
 .standings-table tr:last-child td {
   border-bottom: none;
-}
-
-.standings-table tr:nth-child(even) td {
-  background: rgba(255, 255, 255, 0.015);
 }
 
 .standings-table tr:hover td {
@@ -204,6 +182,16 @@ main.container {
 
 .player-card:hover {
   background: rgba(255, 196, 0, 0.04);
+}
+
+/* Lista simple (sin tarjeta contenedora) */
+.players-list .player-card {
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--bfb-border);
+}
+
+.players-list .player-card:last-child {
+  border-bottom: none;
 }
 
 .player-card img {
@@ -343,10 +331,6 @@ main.container {
   min-width: 100px;
   text-align: center;
   letter-spacing: 0.05em;
-  background: var(--bfb-black-deep);
-  border: 1px solid var(--bfb-border);
-  border-radius: var(--radius-sm);
-  padding: 6px 14px;
 }
 
 .game-details-box {

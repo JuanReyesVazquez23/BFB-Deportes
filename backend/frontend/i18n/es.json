@@ -1,20 +1,5 @@
 {
   "tagline": "MLB en vivo — posiciones, pitchers, noticias y predicciones",
-  "header": {
-    "liveDesk": "Centro de datos MLB",
-    "kicker": "Tu tablero de béisbol",
-    "summaryLabel": "Toda la temporada, en un lugar",
-    "summaryTitle": "Sigue cada lanzamiento sin perder el ritmo",
-    "summaryText": "Resultados, noticias y estadísticas de las Grandes Ligas.",
-    "liveScores": "Marcadores y calendario",
-    "liveScoresDetail": "Partidos y resultados actualizados",
-    "insights": "Datos para seguir el juego",
-    "insightsDetail": "Equipos, jugadores y posiciones",
-    "predictions": "Pon tu pronóstico",
-    "predictionsDetail": "Convierte tus lecturas en puntos Strike",
-    "leagueNow": "Liga en pantalla",
-    "leagueNowDetail": "Toda la temporada de las Grandes Ligas, en un solo lugar."
-  },
   "auth": {
     "login": "Iniciar sesión",
     "register": "Crear cuenta",

@@ -34,7 +34,7 @@
   --radius: 12px;
   --radius-lg: 20px;
   --shadow-yellow: 0 0 0 1px rgba(255, 196, 0, 0.15);
-  --shadow-card: 0 4px 14px rgba(0, 0, 0, 0.32);
+  --shadow-card: none;
   --shadow-card-hover: 0 8px 22px rgba(0, 0, 0, 0.4);
   --surface-gradient: linear-gradient(165deg, #1d1d21 0%, #17171a 100%);
 }
@@ -75,6 +75,12 @@ button, input, select {
 :focus-visible {
   outline: 3px solid var(--bfb-yellow);
   outline-offset: 2px;
+}
+
+/* Selección de texto con los colores del logo */
+::selection {
+  background: var(--bfb-yellow);
+  color: var(--bfb-black);
 }
 
 /* ---------- Utilidades ---------- */

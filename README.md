@@ -1,5 +1,9 @@
 # ⚾ StrikeHub
 
+<p align="center">
+  <img src="backend/frontend/assets/logos/strikehub-logo.svg" alt="StrikeHub" width="359">
+</p>
+
 ## Website Online:
 https://bfbdeportes.onrender.com (Render Free Plan)
 
@@ -179,6 +183,8 @@ bfb-deportes/
     │   └── main.py
     ├── frontend/
     │   ├── index.html
+    │   ├── manifest.json
+    │   ├── assets/ (logos/ = logo SVG del header, icons/ = favicon y PNG de la PWA)
     │   ├── css/styles.css + modules/
     │   ├── js/ (api, i18n, auth, predictions, stats, main, admin, escape, pwa-install)
     │   └── i18n/ (es.json, en.json)

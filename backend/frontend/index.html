@@ -7,18 +7,19 @@
   <meta name="description" content="StrikeHub: sigue la MLB en vivo. Posiciones, pitchers probables, noticias, estadísticas y predicciones.">
 
   <!-- Ícono para pantalla principal (Android/PWA) -->
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+  <link rel="manifest" href="manifest.json?v=20261007">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg?v=20261007">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png?v=20261007">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png?v=20261007">
   <!-- Ícono para pantalla principal en iPhone/iPad (iOS no usa manifest.json para esto) -->
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20261007">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="StrikeHub">
-  <meta name="theme-color" content="#0b0b0c">
+  <meta name="theme-color" content="#0a0a0c">
 
   <!-- Cache-busting: sube el número ?v= en CSS/JS cada vez que cambien,
        para que el navegador no siga usando una versión vieja cacheada. -->
-  <link rel="stylesheet" href="css/styles.css?v=20261005">
+  <link rel="stylesheet" href="css/styles.css?v=20261007">
 </head>
 <body>
 
@@ -26,9 +27,6 @@
   <!-- Barra superior: idioma + estado de usuario -->
   <div class="topbar">
     <div class="container">
-      <div class="topbar-message">
-        <span data-i18n="header.liveDesk">Centro de datos deportivos</span>
-      </div>
       <div class="topbar-actions">
         <select id="lang-select" class="lang-select" aria-label="Idioma / Language">
           <option value="es">ES</option>
@@ -39,57 +37,14 @@
     </div>
   </div>
 
-  <!-- Cabecera StrikeHub: béisbol MLB, una sola liga -->
+  <!-- Cabecera StrikeHub: el único lugar donde aparece el logo -->
   <header class="header">
     <div class="container">
-      <div class="brand-row">
-        <div class="brand">
-          <p class="brand-kicker"><span aria-hidden="true"></span><span data-i18n="header.kicker">Tu tablero de béisbol</span></p>
-          <svg class="logo-sports" width="300" height="64" viewBox="0 0 300 64" role="img" aria-label="StrikeHub - Béisbol MLB">
-            <circle cx="26" cy="32" r="20" fill="none" stroke="#ffc400" stroke-width="4.5"/>
-            <path d="M12 20 Q26 32 12 44" fill="none" stroke="#ffc400" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M40 20 Q26 32 40 44" fill="none" stroke="#ffc400" stroke-width="2.5" stroke-linecap="round"/>
-            <text x="56" y="41" fill="#f5f3ee" font-family="Anton, 'Arial Narrow', sans-serif" font-size="34" letter-spacing="2">STRIKE<tspan fill="#ffc400">HUB</tspan></text>
-          </svg>
-          <p class="tagline" data-i18n="tagline">MLB en vivo — posiciones, pitchers, noticias y predicciones</p>
-        </div>
-        <aside class="header-summary">
-          <span class="header-summary-label" data-i18n="header.summaryLabel">Todo el juego, en un lugar</span>
-          <strong data-i18n="header.summaryTitle">Sigue la acción sin perder el ritmo</strong>
-          <span class="header-summary-copy" data-i18n="header.summaryText">Resultados, noticias y estadísticas de las ligas que importan.</span>
-        </aside>
-      </div>
-      <div class="header-highlights">
-        <div class="header-highlight">
-          <span class="header-highlight-index" aria-hidden="true">01</span>
-          <div>
-            <strong data-i18n="header.liveScores">Marcadores y calendario</strong>
-            <span data-i18n="header.liveScoresDetail">Partidos y resultados actualizados</span>
-          </div>
-        </div>
-        <div class="header-highlight">
-          <span class="header-highlight-index" aria-hidden="true">02</span>
-          <div>
-            <strong data-i18n="header.insights">Datos para seguir el juego</strong>
-            <span data-i18n="header.insightsDetail">Equipos, jugadores y posiciones</span>
-          </div>
-        </div>
-        <div class="header-highlight">
-          <span class="header-highlight-index" aria-hidden="true">03</span>
-          <div>
-            <strong data-i18n="header.predictions">Pon tu pronóstico</strong>
-            <span data-i18n="header.predictionsDetail">Convierte tus lecturas en puntos Strike</span>
-          </div>
-        </div>
-      </div>
-      <div class="header-navigation">
-        <div class="header-navigation-copy">
-          <span data-i18n="header.leagueNow">Liga en pantalla</span>
-          <p data-i18n="header.leagueNowDetail">Toda la temporada de las Grandes Ligas, en un solo lugar.</p>
-        </div>
-        <div class="header-navigation-controls">
-          <p class="league-badge"><span class="league-badge-dot" aria-hidden="true"></span>MLB · Major League Baseball</p>
-        </div>
+      <div class="brand">
+        <h1 class="brand-title">
+          <img class="brand-logo" src="assets/logos/strikehub-logo.svg?v=20261007" alt="StrikeHub" width="359" height="84">
+        </h1>
+        <p class="tagline" data-i18n="tagline">MLB en vivo — posiciones, pitchers, noticias y predicciones</p>
       </div>
     </div>
   </header>
@@ -156,7 +111,7 @@
         </div>
         <aside class="split-side" id="players-today-section">
           <h2 class="section-title" data-i18n="sections.playersToday">Jugadores Hoy</h2>
-          <div class="card" id="players-today-container"></div>
+          <div class="players-list" id="players-today-container"></div>
         </aside>
       </div>
     </section>
@@ -239,7 +194,7 @@
 
   <script src="js/escape.js?v=20260903-4"></script>
   <script src="js/api.js?v=20260719"></script>
-  <script src="js/i18n.js?v=20261005"></script>
+  <script src="js/i18n.js?v=20261007"></script>
   <script src="js/auth.js?v=20260803"></script>
   <script src="js/predictions.js?v=20261005"></script>
   <script src="js/stats.js?v=20261005"></script>
