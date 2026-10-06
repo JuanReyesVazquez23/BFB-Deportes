@@ -1,6 +1,6 @@
 /**
- * Orquesta la interfaz principal: cambio de pestaña por deporte y
- * renderizado de posiciones, "jugadores hoy", noticias y partidos
+ * Orquesta la interfaz principal de StrikeHub (solo MLB): renderizado de
+ * posiciones, "jugadores hoy" (pitchers probables), noticias y partidos
  * (en vivo / finalizados / próximos con barra de probabilidad).
  */
 

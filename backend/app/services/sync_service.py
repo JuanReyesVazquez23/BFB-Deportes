@@ -322,8 +322,8 @@ def delete_players_cascade(db: Session, player_ids: list[int]) -> int:
     """
     Borra los jugadores indicados junto con los favoritos que apunten a
     ellos (para no violar la llave foránea). Se usa en la limpieza de
-    rosters de NBA (jugadores retirados que ya no están en el roster
-    activo) y se puede reutilizar donde haga falta borrar jugadores.
+    rosters (jugadores que ya no están en el roster activo) y se puede
+    reutilizar donde haga falta borrar jugadores.
     """
     if not player_ids:
         return 0
