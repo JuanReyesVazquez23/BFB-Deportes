@@ -323,6 +323,25 @@
   font-size: 14px;
 }
 
+/* Etiqueta Local/Visita: el local se destaca en amarillo, la visita en gris */
+.team-role {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bfb-muted);
+  border: 1px solid var(--bfb-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.team-block.home .team-role {
+  color: var(--bfb-yellow);
+  border-color: var(--bfb-yellow-dim);
+}
+
 .score-led {
   font-family: var(--font-mono);
   font-size: 24px;

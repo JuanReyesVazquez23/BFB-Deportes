@@ -43,7 +43,9 @@
     "pitching": "Lanza",
     "lastPlay": "Última jugada",
     "searchByDate": "Buscar por fecha:",
-    "today": "Hoy"
+    "today": "Hoy",
+    "homeTeam": "Local",
+    "awayTeam": "Visita"
   },
   "stats": {
     "team": "Equipo",

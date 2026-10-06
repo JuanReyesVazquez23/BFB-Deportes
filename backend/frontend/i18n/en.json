@@ -43,7 +43,9 @@
     "pitching": "Pitching",
     "lastPlay": "Last play",
     "searchByDate": "Search by date:",
-    "today": "Today"
+    "today": "Today",
+    "homeTeam": "Home",
+    "awayTeam": "Away"
   },
   "stats": {
     "team": "Team",

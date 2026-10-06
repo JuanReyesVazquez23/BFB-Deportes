@@ -269,11 +269,13 @@ async function renderGameCard(game) {
         <div class="team-block home">
           ${game.home_team.logo_url ? `<img src="${esc(safeImg(game.home_team.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
           <span class="team-name">${esc(game.home_team.name)}</span>
+          <span class="team-role">${t('game.homeTeam')}</span>
         </div>
         <div class="score-led">${esc(scoreDisplay(game))}</div>
         <div class="team-block away">
           ${game.away_team.logo_url ? `<img src="${esc(safeImg(game.away_team.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
           <span class="team-name">${esc(game.away_team.name)}</span>
+          <span class="team-role">${t('game.awayTeam')}</span>
         </div>
       </div>
       ${liveSlot}
