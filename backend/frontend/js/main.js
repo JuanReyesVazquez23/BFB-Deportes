@@ -469,17 +469,77 @@ async function toggleFavorite(star, type, id) {
   }
 }
 
-/* ---------------------- Carga de la liga (MLB) ---------------------- */
+/* ---------------------- Carga de la liga (MLB) ----------------------
+   Carga por secciones para velocidad: los partidos (lo urgente) se piden
+   de inmediato; posiciones, jugadores de hoy y noticias se cargan de forma
+   diferida cuando el usuario hace scroll hasta ellas (IntersectionObserver,
+   una sola vez por sección). Así la primera pintura solo espera 1 request
+   en vez de 4+ (noticias + partidos + posiciones + hasta 6 detalles). */
+const lazyLoadedSections = new Set();
+let lazyObserver = null;
+
+function observeLazySections(leagueKey) {
+  if (lazyObserver) lazyObserver.disconnect();
+
+  const jobs = {
+    'standings-section': () => renderStandings(leagueKey),
+    'players-today-section': () => renderPlayersToday(leagueKey),
+    'news-section': () => renderNews(SPORT_KEY),
+  };
+
+  if (!('IntersectionObserver' in window)) {
+    // Sin soporte: carga todo de una vez (comportamiento anterior).
+    Object.values(jobs).forEach((load) => load());
+    return;
+  }
+
+  lazyObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const id = entry.target.id;
+        if (lazyLoadedSections.has(id)) continue;
+        lazyLoadedSections.add(id);
+        lazyObserver.unobserve(entry.target);
+        jobs[id]?.();
+      }
+    },
+    { rootMargin: '400px 0px' } // precarga un poco antes de llegar
+  );
+
+  for (const id of Object.keys(jobs)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (lazyLoadedSections.has(id)) {
+      jobs[id]();
+    } else {
+      showSectionPlaceholder(id);
+      lazyObserver.observe(el);
+    }
+  }
+}
+
+// Mientras la sección diferida no carga, muestra su esqueleto en vez de vacío.
+function showSectionPlaceholder(id) {
+  const containers = {
+    'standings-section': 'standings-container',
+    'players-today-section': 'players-today-container',
+    'news-section': 'news-container',
+  };
+  const el = document.getElementById(containers[id]);
+  if (el && !el.innerHTML.trim()) {
+    el.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
+  }
+}
+
 async function loadLeagueData(leagueKey = LEAGUE_KEY) {
   activeLeague = leagueKey;
   const dateInput = document.getElementById('games-date-input');
   if (dateInput) dateInput.value = '';
 
-  await Promise.all([
-    renderGamesSection(leagueKey),
-    renderStandings(leagueKey),
-    renderPlayersToday(leagueKey),
-  ]);
+  lazyLoadedSections.clear();
+  observeLazySections(leagueKey);
+  await renderGamesSection(leagueKey);
 }
 
 function initDateSearch() {
@@ -498,7 +558,6 @@ function initDateSearch() {
 
 async function loadMainContent() {
   resetStatsSearch();
-  await renderNews(SPORT_KEY);
   await loadLeagueData(LEAGUE_KEY);
 }
 
@@ -512,8 +571,9 @@ document.addEventListener('bfb:user-changed', () => {
   if (!activeLeague) return;
   const dateInput = document.getElementById('games-date-input');
   renderGamesSection(activeLeague, dateInput?.value || null);
-  const standingsSection = document.getElementById('standings-section');
-  if (standingsSection && !standingsSection.classList.contains('hidden')) {
+  // Posiciones solo si ya se cargaron (si no, se pintarán con la sesión
+  // correcta cuando el usuario llegue a la sección).
+  if (lazyLoadedSections.has('standings-section')) {
     renderStandings(activeLeague);
   }
 });
