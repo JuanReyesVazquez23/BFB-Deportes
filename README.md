@@ -35,6 +35,7 @@ https://strikehub.onrender.com (Render Free Plan)
 - ⚾ Marcadores de MLB **en vivo** (diamante, conteo, última jugada)
 - 📅 Calendario y resultados con búsqueda por fecha
 - 📊 Posiciones y estadísticas reales de bateo/pitcheo
+- 🏆 Postemporada: cuadro en vivo (Wild Card → Serie Mundial) con sembrados, victorias por serie y campeón
 - 🎯 Predicciones con puntos Strike, historial y avisos de ganaste/perdiste
 - ❤️ Equipos favoritos
 - 👤 Autenticación segura (JWT en cookie httpOnly)
@@ -179,8 +180,9 @@ bfb-deportes/
     │   ├── models/        # tablas SQLAlchemy (sport, prediction, user, favorite)
     │   ├── schemas/       # validación Pydantic
     │   ├── api/routes/    # auth, leagues, games, news, favorites, predictions, stats, admin
-    │   ├── services/      # mlb_service, news_service, sync_service, probability_service, ...
+    │   ├── services/      # mlb_service, news_service, sync_service, probability_service, postseason_service, ...
     │   └── main.py
+    ├── tests/             # pruebas sin red: python -m unittest discover -s tests
     ├── frontend/
     │   ├── index.html
     │   ├── manifest.json

@@ -119,39 +119,228 @@
   color: var(--bfb-black);
 }
 
-/* ---------- Bracket de postemporada ---------- */
-.bracket-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
+/* ---------- Postemporada: cuadro (bracket) en SVG ---------- */
+.ps-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+  margin-bottom: 14px;
 }
 
-.bracket-league-title {
+.ps-title {
   font-family: var(--font-display);
-  font-size: 17px;
-  letter-spacing: 0.03em;
-  margin: 0 0 16px;
-  color: var(--bfb-white);
+  font-size: clamp(20px, 4vw, 30px);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
 }
 
-.bracket-center .bracket-league-title {
+.ps-title small {
   color: var(--bfb-yellow);
-  text-align: center;
+  font-size: 0.7em;
+  margin-left: 6px;
 }
 
-.bracket-round {
-  margin-bottom: 20px;
+.ps-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--bfb-muted);
 }
 
-.bracket-round-title {
+.ps-stale {
+  color: var(--bfb-loss);
+}
+
+.ps-champion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--bfb-yellow-dim);
+  border-radius: var(--radius);
+  background: var(--bfb-yellow-glow);
+  font-size: 15px;
+}
+
+.ps-champion img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.ps-hint {
+  display: none;
+  margin: 0 0 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--bfb-muted);
+}
+
+.ps-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  background: var(--surface-gradient);
+  padding: 8px;
+}
+
+.ps-svg {
+  display: block;
+  width: 100%;
+  min-width: 760px;
+  height: auto;
+}
+
+.ps-line {
+  fill: none;
+  stroke: var(--bfb-border-bright);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.ps-line.win {
+  stroke: var(--bfb-yellow);
+}
+
+.ps-diamond {
+  fill: #f2f4f8;
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+}
+
+.ps-diamond.ps-empty {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: var(--bfb-border-bright);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.ps-out {
+  opacity: 0.38;
+  filter: grayscale(1);
+}
+
+.ps-win .ps-diamond {
+  filter: drop-shadow(0 0 6px rgba(255, 196, 0, 0.75));
+}
+
+.ps-seed circle {
+  fill: var(--bfb-black);
+  stroke: var(--bfb-yellow);
+  stroke-width: 1.5;
+}
+
+.ps-seed text,
+.ps-wins text,
+.ps-abbr,
+.ps-label,
+.ps-sub {
+  font-family: var(--font-mono);
+  text-anchor: middle;
+}
+
+.ps-seed text {
+  fill: var(--bfb-yellow);
+  font-size: 11px;
+  font-weight: 700;
+  dominant-baseline: central;
+}
+
+.ps-wins rect {
+  fill: var(--bfb-yellow);
+}
+
+.ps-wins text {
+  fill: var(--bfb-black);
+  font-size: 12px;
+  font-weight: 700;
+  dominant-baseline: central;
+}
+
+.ps-abbr {
+  fill: var(--bfb-black);
+  font-size: 11px;
+  font-weight: 700;
+  dominant-baseline: central;
+}
+
+.ps-label {
+  fill: var(--bfb-white);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.ps-label.ps-champ {
+  fill: var(--bfb-yellow);
+}
+
+.ps-sub {
+  fill: var(--bfb-muted);
+  font-size: 10.5px;
+}
+
+.ps-league {
+  fill: var(--bfb-muted);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.ps-ws-title {
+  fill: var(--bfb-yellow);
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  text-anchor: middle;
+}
+
+.ps-live-dot {
+  fill: var(--bfb-live);
+  stroke: var(--bfb-black);
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ps-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes ps-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ps-live-dot { animation: none; }
+}
+
+@media (max-width: 800px) {
+  .ps-hint { display: block; }
+}
+
+.ps-detail-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   color: var(--bfb-yellow);
-  margin: 0 0 10px;
+  margin: 26px 0 12px;
+}
+
+.ps-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.ps-detail-grid .series-card {
+  margin-bottom: 0;
 }
 
 .series-card {
@@ -180,6 +369,14 @@
   border-bottom: 1px solid var(--bfb-border);
   font-weight: 700;
   font-size: 14px;
+}
+
+.series-team.out {
+  opacity: 0.55;
+}
+
+.series-team.winner .series-wins {
+  color: var(--bfb-live);
 }
 
 .series-team img {
@@ -211,13 +408,6 @@
   text-align: right;
 }
 
-.series-leader {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--bfb-live);
-  margin-top: 8px;
-}
-
 .series-games {
   margin-top: 8px;
   border-top: 1px dashed var(--bfb-border);
@@ -234,11 +424,6 @@
 
 .series-game.live {
   color: var(--bfb-live);
-}
-
-@media (max-width: 900px) {
-  .bracket-grid { grid-template-columns: 1fr; }
-  .bracket-center { order: -1; }
 }
 
 /* ---------- Tabla de posiciones ---------- */

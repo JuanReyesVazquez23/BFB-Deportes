@@ -452,13 +452,182 @@ function attachPredictionHandlers(container) {
   });
 }
 
-/* ---------------------- Postemporada (bracket) ---------------------- */
+/* ---------------------- Postemporada (bracket) ----------------------
+   Cuadro dibujado en SVG (como el "Panorama de la Postemporada" de MLB):
+   Liga Americana a la izquierda, Nacional a la derecha y la Serie Mundial
+   al centro. Los datos vienen de GET /postseason/bracket (siempre 5 series
+   por liga + la Serie Mundial; un equipo null = por definir). */
+const PS_GEO = {
+  R: 31, // semi-diagonal del rombo de cada equipo
+  W: 1000,
+  H: 664,
+  col: [60, 172, 284, 396],
+  center: 500,
+  centerY: 355,
+};
+const PS_REFRESH_MS = 60000;
+let postseasonTimer = null;
+
+function stopPostseasonPolling() {
+  if (postseasonTimer) {
+    clearInterval(postseasonTimer);
+    postseasonTimer = null;
+  }
+}
+
+function startPostseasonPolling() {
+  stopPostseasonPolling();
+  postseasonTimer = setInterval(() => {
+    if (document.hidden || activeView !== 'postseason') return;
+    renderPostseason(true);
+  }, PS_REFRESH_MS);
+}
+
+function psColor(value) {
+  return /^#[0-9a-fA-F]{3,8}$/.test(value || '') ? value : '#3d3d43';
+}
+
+function psRoundLabel(series) {
+  if (series.round === 'WS') return t('postseason.WS');
+  if (series.round === 'WC') return `${series.league} ${t('postseason.WC')}`;
+  return `${series.league}${series.round === 'DS' ? 'DS' : 'CS'}`;
+}
+
+function psPoints(cx, cy, r) {
+  return `${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}`;
+}
+
+/* Un equipo (rombo con logo, sembrado y victorias) o un rombo vacío. */
+function psNode(node) {
+  const { team, x, y, showWins } = node;
+  const r = node.r || PS_GEO.R;
+  if (!team) {
+    return `<polygon class="ps-diamond ps-empty" points="${psPoints(x, y, r)}"><title>${esc(t('postseason.tbd'))}</title></polygon>`;
+  }
+  const cls = `ps-node${team.eliminated ? ' ps-out' : ''}${team.is_winner ? ' ps-win' : ''}`;
+  const logo = safeImg(team.logo_url);
+  const side = r * 1.2;
+  const inner = logo
+    ? `<image href="${esc(logo)}" x="${x - side / 2}" y="${y - side / 2}" width="${side}" height="${side}" preserveAspectRatio="xMidYMid meet"/>`
+    : `<text class="ps-abbr" x="${x}" y="${y}">${esc(team.abbreviation || '')}</text>`;
+  const seed = team.seed != null
+    ? `<g class="ps-seed"><circle cx="${x - r * 0.62}" cy="${y - r * 0.62}" r="9"/><text x="${x - r * 0.62}" y="${y - r * 0.62}">${esc(team.seed)}</text></g>`
+    : '';
+  const wins = showWins
+    ? `<g class="ps-wins"><rect x="${x + r * 0.32}" y="${y + r * 0.32}" width="22" height="19" rx="5"/><text x="${x + r * 0.32 + 11}" y="${y + r * 0.32 + 10}">${Number(team.wins)}</text></g>`
+    : '';
+  const title = `${team.name || team.abbreviation}${team.seed != null ? ` · #${team.seed}` : ''}${showWins ? ` · ${Number(team.wins)}` : ''}`;
+  return `<g class="${cls}"><title>${esc(title)}</title>
+    <polygon class="ps-diamond" stroke="${psColor(team.color)}" points="${psPoints(x, y, r)}"/>
+    ${inner}${seed}${wins}</g>`;
+}
+
+/* Líneas en codo desde cada entrada hasta el nodo de la serie siguiente. */
+function psConnectors(inputs, target, dir, series) {
+  const r = PS_GEO.R;
+  const endX = target.x - dir * r;
+  const lines = inputs.map((n) => {
+    const startX = n.x + dir * r;
+    const midX = (startX + endX) / 2;
+    const win = n.team && n.team.is_winner ? ' win' : '';
+    return `<path class="ps-line${win}" d="M${startX} ${n.y} H${midX} V${target.y} H${endX}"/>`;
+  });
+  const startX = inputs[0].x + dir * r;
+  const live = series && series.status === 'live'
+    ? `<circle class="ps-live-dot" cx="${(startX + endX) / 2}" cy="${target.y}" r="4.5"/>`
+    : '';
+  return lines.join('') + live;
+}
+
+function psSeriesDone(series) {
+  return !!series && ['live', 'in_progress', 'final'].includes(series.status);
+}
+
+/* Un lado del cuadro (dir = 1 liga Americana, -1 liga Nacional, espejo). */
+function psSide(league, list, ws, dir) {
+  const slot = (name) => list.find((s) => s.slot === name);
+  const wcA = slot('WC_A'), wcB = slot('WC_B'), dsA = slot('DS_A'), dsB = slot('DS_B'), cs = slot('CS');
+  if (!wcA || !wcB || !dsA || !dsB || !cs || !ws) return '';
+  const X = (i) => (dir > 0 ? PS_GEO.col[i] : PS_GEO.W - PS_GEO.col[i]);
+  const cy = PS_GEO.centerY;
+  const N = (series, idx, col, y) => ({ team: series.teams[idx], x: X(col), y, showWins: psSeriesDone(series) });
+
+  const wcA0 = N(wcA, 0, 0, 95), wcA1 = N(wcA, 1, 0, 185);
+  const wcB0 = N(wcB, 0, 0, 415), wcB1 = N(wcB, 1, 0, 505);
+  const dsA0 = N(dsA, 0, 1, 140), dsA1 = N(dsA, 1, 1, 250);
+  const dsB0 = N(dsB, 0, 1, 460), dsB1 = N(dsB, 1, 1, 570);
+  const cs0 = N(cs, 0, 2, 195), cs1 = N(cs, 1, 2, 515);
+  const wsIdx = dir > 0 ? 0 : 1;
+  const wsN = N(ws, wsIdx, 3, cy);
+
+  const lines =
+    psConnectors([wcA0, wcA1], dsA0, dir, wcA) +
+    psConnectors([wcB0, wcB1], dsB0, dir, wcB) +
+    psConnectors([dsA0, dsA1], cs0, dir, dsA) +
+    psConnectors([dsB0, dsB1], cs1, dir, dsB) +
+    psConnectors([cs0, cs1], wsN, dir, cs);
+  const nodes = [wcA0, wcA1, wcB0, wcB1, dsA0, dsA1, dsB0, dsB1, cs0, cs1, wsN].map(psNode).join('');
+
+  const mid = (a, b) => (X(a) + X(b)) / 2;
+  const label = (x, main, sub) =>
+    `<text class="ps-label" x="${x}" y="634">${esc(main)}</text><text class="ps-sub" x="${x}" y="650">${esc(sub)}</text>`;
+  const bestOf = (n) => `${t('postseason.bestOf')} ${n}`;
+  const labels =
+    label(mid(0, 1), t('postseason.WC').toUpperCase(), bestOf(wcA.best_of)) +
+    label(mid(1, 2), `${league}DS`, bestOf(dsA.best_of)) +
+    label(mid(2, 3), `${league}CS`, bestOf(cs.best_of));
+  const leagueTitle = `<text class="ps-league" x="${dir > 0 ? 30 : PS_GEO.W - 30}" y="30" text-anchor="${dir > 0 ? 'start' : 'end'}">${esc(t(`postseason.${league}`).toUpperCase())}</text>`;
+
+  return `<g>${lines}${nodes}${labels}${leagueTitle}</g>`;
+}
+
+/* Centro: Serie Mundial y campeón. */
+function psCenter(ws, season) {
+  const cx = PS_GEO.center, cy = PS_GEO.centerY;
+  const champ = (ws.teams || []).find((tm) => tm && tm.is_winner) || null;
+  const rBig = 46;
+  const left = ws.teams[0], right = ws.teams[1];
+  const lines = [
+    `<path class="ps-line${left && left.is_winner ? ' win' : ''}" d="M${PS_GEO.col[3] + PS_GEO.R} ${cy} H${cx - rBig}"/>`,
+    `<path class="ps-line${right && right.is_winner ? ' win' : ''}" d="M${PS_GEO.W - PS_GEO.col[3] - PS_GEO.R} ${cy} H${cx + rBig}"/>`,
+    ws.status === 'live' ? `<circle class="ps-live-dot" cx="${cx - rBig - 18}" cy="${cy}" r="4.5"/><circle class="ps-live-dot" cx="${cx + rBig + 18}" cy="${cy}" r="4.5"/>` : '',
+  ].join('');
+  const node = champ
+    ? psNode({ team: { ...champ, eliminated: false, is_winner: true }, x: cx, y: cy, r: rBig, showWins: false })
+    : `<polygon class="ps-diamond ps-empty ps-ws-empty" points="${psPoints(cx, cy, rBig)}"><title>${esc(t('postseason.WS'))}</title></polygon>`;
+
+  const wins = psSeriesDone(ws) && left && right
+    ? `${esc(left.abbreviation)} ${Number(left.wins)} – ${Number(right.wins)} ${esc(right.abbreviation)}`
+    : '';
+  const caption = champ
+    ? `<text class="ps-label ps-champ" x="${cx}" y="${cy + rBig + 28}">${esc(t('postseason.champion').toUpperCase())}</text>
+       <text class="ps-sub" x="${cx}" y="${cy + rBig + 46}">${esc(champ.name || champ.abbreviation)}</text>`
+    : `<text class="ps-sub" x="${cx}" y="${cy + rBig + 28}">${esc(t('postseason.bestOf'))} ${Number(ws.best_of)}</text>`;
+  return `<g>${lines}
+    <text class="ps-ws-title" x="${cx}" y="${cy - rBig - 40}">${esc(t('postseason.WS').toUpperCase())}</text>
+    <text class="ps-sub" x="${cx}" y="${cy - rBig - 20}">${esc(season)}</text>
+    ${node}
+    ${wins ? `<text class="ps-label" x="${cx}" y="${cy + rBig + (champ ? 66 : 48)}">${wins}</text>` : ''}
+    ${caption}</g>`;
+}
+
+function renderBracketSvg(data) {
+  const ws = data.world_series;
+  if (!ws) return '';
+  return `<svg class="ps-svg" viewBox="0 0 ${PS_GEO.W} ${PS_GEO.H}" role="img" aria-label="${esc(t('postseason.aria'))}" xmlns="http://www.w3.org/2000/svg">
+    ${psSide('AL', data.al || [], ws, 1)}
+    ${psSide('NL', data.nl || [], ws, -1)}
+    ${psCenter(ws, data.season)}
+  </svg>`;
+}
+
+/* Tarjeta con el detalle de una serie (marcadores juego por juego). */
 function renderSeriesCard(series) {
-  const roundName = t(`postseason.${series.round}`);
-  const teamRows = series.teams
+  const teams = (series.teams || []).filter(Boolean);
+  const teamRows = teams
     .map(
-      (tm, idx) => `
-      <div class="series-team ${idx === 0 ? 'top-seed' : ''}">
+      (tm) => `
+      <div class="series-team${tm.is_winner ? ' winner' : ''}${tm.eliminated ? ' out' : ''}">
         ${tm.logo_url ? `<img src="${esc(safeImg(tm.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
         <span class="series-seed">${tm.seed != null ? esc(tm.seed) : ''}</span>
         <span class="series-team-name">${esc(tm.abbreviation || tm.name)}</span>
@@ -468,65 +637,74 @@ function renderSeriesCard(series) {
     .join('');
   const gamesRows = (series.games || [])
     .map((g) => {
+      const num = g.game_number != null ? `${t('postseason.gameShort')}${Number(g.game_number)} · ` : '';
+      const score = `${esc(g.away_abbreviation)} ${g.away_score ?? 0} · ${g.home_score ?? 0} ${esc(g.home_abbreviation)}`;
       const label =
-        g.status === 'final'
-          ? `${esc(g.away_abbreviation)} ${g.away_score ?? 0} · ${g.home_score ?? 0} ${esc(g.home_abbreviation)}`
-          : g.status === 'live'
-            ? `${esc(g.away_abbreviation)} ${g.away_score ?? 0} · ${g.home_score ?? 0} ${esc(g.home_abbreviation)} ●`
-            : esc(formatDate(g.date));
-      return `<div class="series-game ${esc(g.status)}">${label}</div>`;
+        g.status === 'final' ? score
+          : g.status === 'live' ? `${score} ●`
+            : g.date ? esc(formatDate(g.date)) : '';
+      return `<div class="series-game ${esc(g.status)}">${num}${label}</div>`;
     })
     .join('');
   return `
     <div class="series-card">
-      <div class="series-round">${esc(roundName)} · ${t('postseason.bestOf')} ${Number(series.best_of)}</div>
+      <div class="series-round">${esc(psRoundLabel(series))} · ${esc(t('postseason.bestOf'))} ${Number(series.best_of)}</div>
       ${teamRows}
-      ${series.leader_text ? `<div class="series-leader">${esc(series.leader_text)}</div>` : ''}
       <div class="series-games">${gamesRows}</div>
     </div>`;
 }
 
-function renderLeagueBracket(seriesList) {
-  const rounds = ['WC', 'DS', 'CS'];
-  return rounds
-    .map((r) => {
-      const items = seriesList.filter((s) => s.round === r);
-      if (!items.length) return '';
-      return `
-        <div class="bracket-round">
-          <h4 class="bracket-round-title">${esc(t(`postseason.${r}`))}</h4>
-          ${items.map(renderSeriesCard).join('')}
-        </div>`;
-    })
-    .join('');
+function renderSeriesDetails(data) {
+  const order = { WS: 0, CS: 1, DS: 2, WC: 3 };
+  const all = [...(data.al || []), ...(data.nl || []), ...(data.world_series ? [data.world_series] : [])]
+    .filter((s) => s.status !== 'pending' && (s.teams || []).every(Boolean) && (s.games || []).length)
+    .sort((a, b) => order[a.round] - order[b.round]);
+  if (!all.length) return '';
+  return `
+    <h3 class="ps-detail-title">${esc(t('postseason.details'))}</h3>
+    <div class="ps-detail-grid">${all.map(renderSeriesCard).join('')}</div>`;
 }
 
-async function renderPostseason() {
+async function renderPostseason(silent = false) {
   const container = document.getElementById('postseason-container');
-  container.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
+  if (!container) return;
+  if (!silent) container.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
   try {
     const data = await api.get('/postseason/bracket');
     if (!data.postseason_active) {
+      stopPostseasonPolling();
       container.innerHTML = `<p class="empty-state">${t('postseason.notActive')}</p>`;
       return;
     }
+    const prevScroller = container.querySelector('.ps-scroll');
+    const prevLeft = prevScroller ? prevScroller.scrollLeft : null;
+
+    const time = data.updated_at
+      ? new Date(data.updated_at).toLocaleTimeString(i18nState.lang === 'es' ? 'es-ES' : 'en-US', { hour: '2-digit', minute: '2-digit' })
+      : '';
+    const champ = data.champion;
     container.innerHTML = `
-      <div class="bracket-grid">
-        <div class="bracket-side">
-          <h3 class="bracket-league-title">AL · American League</h3>
-          ${renderLeagueBracket(data.al || [])}
+      <div class="ps-head">
+        <h3 class="ps-title">${esc(t('postseason.title'))} <small>${esc(data.season)}</small></h3>
+        <div class="ps-meta">
+          ${data.stale ? `<span class="ps-stale">${esc(t('postseason.stale'))}</span> · ` : ''}${time ? `${esc(t('postseason.updated'))} ${esc(time)}` : ''}
         </div>
-        <div class="bracket-center">
-          <h3 class="bracket-league-title">${esc(t('postseason.WS'))}</h3>
-          ${data.world_series ? renderSeriesCard(data.world_series) : `<p class="empty-state">${t('postseason.notActive')}</p>`}
-        </div>
-        <div class="bracket-side">
-          <h3 class="bracket-league-title">NL · National League</h3>
-          ${renderLeagueBracket(data.nl || [])}
-        </div>
-      </div>`;
+      </div>
+      ${champ ? `<div class="ps-champion">🏆 ${esc(t('postseason.champion'))}: ${champ.logo_url ? `<img src="${esc(safeImg(champ.logo_url))}" alt="" decoding="async">` : ''}<strong>${esc(champ.name || champ.abbreviation)}</strong></div>` : ''}
+      <p class="ps-hint">${esc(t('postseason.scrollHint'))}</p>
+      <div class="ps-scroll">${renderBracketSvg(data)}</div>
+      ${renderSeriesDetails(data)}`;
+
+    const scroller = container.querySelector('.ps-scroll');
+    if (scroller) {
+      scroller.scrollLeft = prevLeft != null ? prevLeft : Math.max(0, (scroller.scrollWidth - scroller.clientWidth) / 2);
+    }
+    startPostseasonPolling();
   } catch (err) {
-    container.innerHTML = `<p class="empty-state">${t('common.error')}</p>`;
+    // En una actualización silenciosa se conserva el cuadro que ya estaba en pantalla.
+    if (!silent || !container.querySelector('.ps-scroll')) {
+      container.innerHTML = `<p class="empty-state">${t('common.error')}</p>`;
+    }
   }
 }
 
@@ -598,8 +776,11 @@ function showView(name) {
   });
   // El polling en vivo solo tiene sentido en su vista.
   if (name !== 'live') stopLivePolling();
+  if (name !== 'postseason') stopPostseasonPolling();
   if (loadedViews.has(name)) {
     if (name === 'live') renderLiveSection(activeLeague);
+    // El cuadro de postemporada cambia con cada juego: se actualiza al volver (sin parpadeo si ya estaba dibujado).
+    if (name === 'postseason') renderPostseason(!!document.querySelector('#postseason-container .ps-scroll'));
     return;
   }
   loadedViews.add(name);

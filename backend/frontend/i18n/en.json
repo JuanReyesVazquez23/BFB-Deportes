@@ -39,6 +39,17 @@
     "CS": "Championship Series",
     "WS": "World Series",
     "bestOf": "Best of",
+    "title": "Postseason Picture",
+    "AL": "American League",
+    "NL": "National League",
+    "champion": "Champion",
+    "updated": "Updated",
+    "stale": "Saved data: could not refresh right now",
+    "scrollHint": "Swipe to see the full bracket",
+    "details": "Series details",
+    "tbd": "To be determined",
+    "gameShort": "G",
+    "aria": "MLB postseason bracket",
     "notActive": "No postseason yet this season. Check back in October."
   },
   "game": {
