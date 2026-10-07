@@ -192,7 +192,7 @@
 .ps-svg {
   display: block;
   width: 100%;
-  min-width: 760px;
+  min-width: 900px;
   height: auto;
 }
 
@@ -335,109 +335,6 @@
     min-width: 0;
     width: 100%;
   }
-}
-
-.ps-detail-title {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--bfb-yellow);
-  margin: 26px 0 12px;
-}
-
-.ps-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 12px;
-}
-
-.ps-detail-grid .series-card {
-  margin-bottom: 0;
-}
-
-.series-card {
-  background: var(--surface-gradient);
-  border: 1px solid var(--bfb-border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  box-shadow: var(--shadow-card);
-}
-
-.series-round {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--bfb-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 10px;
-}
-
-.series-team {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--bfb-border);
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.series-team.out {
-  opacity: 0.55;
-}
-
-.series-team.winner .series-wins {
-  color: var(--bfb-live);
-}
-
-.series-team img {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-.series-seed {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--bfb-muted);
-  min-width: 14px;
-}
-
-.series-team-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.series-wins {
-  font-family: var(--font-mono);
-  font-size: 16px;
-  color: var(--bfb-yellow);
-  min-width: 20px;
-  text-align: right;
-}
-
-.series-games {
-  margin-top: 8px;
-  border-top: 1px dashed var(--bfb-border);
-  padding-top: 8px;
-  display: grid;
-  gap: 4px;
-}
-
-.series-game {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--bfb-muted);
-}
-
-.series-game.live {
-  color: var(--bfb-live);
 }
 
 /* ---------- Tabla de posiciones ---------- */

@@ -621,50 +621,6 @@ function renderBracketSvg(data) {
   </svg>`;
 }
 
-/* Tarjeta con el detalle de una serie (marcadores juego por juego). */
-function renderSeriesCard(series) {
-  const teams = (series.teams || []).filter(Boolean);
-  const teamRows = teams
-    .map(
-      (tm) => `
-      <div class="series-team${tm.is_winner ? ' winner' : ''}${tm.eliminated ? ' out' : ''}">
-        ${tm.logo_url ? `<img src="${esc(safeImg(tm.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
-        <span class="series-seed">${tm.seed != null ? esc(tm.seed) : ''}</span>
-        <span class="series-team-name">${esc(tm.abbreviation || tm.name)}</span>
-        <span class="series-wins">${Number(tm.wins)}</span>
-      </div>`
-    )
-    .join('');
-  const gamesRows = (series.games || [])
-    .map((g) => {
-      const num = g.game_number != null ? `${t('postseason.gameShort')}${Number(g.game_number)} · ` : '';
-      const score = `${esc(g.away_abbreviation)} ${g.away_score ?? 0} · ${g.home_score ?? 0} ${esc(g.home_abbreviation)}`;
-      const label =
-        g.status === 'final' ? score
-          : g.status === 'live' ? `${score} ●`
-            : g.date ? esc(formatDate(g.date)) : '';
-      return `<div class="series-game ${esc(g.status)}">${num}${label}</div>`;
-    })
-    .join('');
-  return `
-    <div class="series-card">
-      <div class="series-round">${esc(psRoundLabel(series))} · ${esc(t('postseason.bestOf'))} ${Number(series.best_of)}</div>
-      ${teamRows}
-      <div class="series-games">${gamesRows}</div>
-    </div>`;
-}
-
-function renderSeriesDetails(data) {
-  const order = { WS: 0, CS: 1, DS: 2, WC: 3 };
-  const all = [...(data.al || []), ...(data.nl || []), ...(data.world_series ? [data.world_series] : [])]
-    .filter((s) => s.status !== 'pending' && (s.teams || []).every(Boolean) && (s.games || []).length)
-    .sort((a, b) => order[a.round] - order[b.round]);
-  if (!all.length) return '';
-  return `
-    <h3 class="ps-detail-title">${esc(t('postseason.details'))}</h3>
-    <div class="ps-detail-grid">${all.map(renderSeriesCard).join('')}</div>`;
-}
-
 async function renderPostseason(silent = false) {
   const container = document.getElementById('postseason-container');
   if (!container) return;
@@ -692,8 +648,7 @@ async function renderPostseason(silent = false) {
       </div>
       ${champ ? `<div class="ps-champion">🏆 ${esc(t('postseason.champion'))}: ${champ.logo_url ? `<img src="${esc(safeImg(champ.logo_url))}" alt="" decoding="async">` : ''}<strong>${esc(champ.name || champ.abbreviation)}</strong></div>` : ''}
       <p class="ps-hint">${esc(t('postseason.scrollHint'))}</p>
-      <div class="ps-scroll">${renderBracketSvg(data)}</div>
-      ${renderSeriesDetails(data)}`;
+      <div class="ps-scroll">${renderBracketSvg(data)}</div>`;
 
     const scroller = container.querySelector('.ps-scroll');
     if (scroller) {
