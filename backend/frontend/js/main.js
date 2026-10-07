@@ -362,44 +362,67 @@ function startLivePolling(gameIds) {
   });
 }
 
-async function renderGamesSection(leagueKey, specificDate = null) {
-  const container = document.getElementById('games-container');
+async function fetchDisplayGames(leagueKey, specificDate = null) {
+  const dateParam = specificDate ? `?game_date=${specificDate}` : '';
+  const games = await api.get(`/leagues/${leagueKey}/games${dateParam}`);
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const isPastDateSearch = Boolean(specificDate) && specificDate < todayIso;
+
+  // Si se busca una fecha pasada, se fuerza status='final' en una copia de
+  // cada juego (sin mutar el original). Así toda la lógica de abajo
+  // (etiqueta, si se muestra el diamante, agrupación) es consistente, sin
+  // importar qué status haya quedado guardado por error en el backend.
+  const displayGames = isPastDateSearch ? games.map((g) => ({ ...g, status: 'final' })) : games;
+  return { displayGames, isPastDateSearch };
+}
+
+async function renderLiveSection(leagueKey) {
+  const container = document.getElementById('live-container');
   container.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
   try {
-    const dateParam = specificDate ? `?game_date=${specificDate}` : '';
-    const games = await api.get(`/leagues/${leagueKey}/games${dateParam}`);
+    const { displayGames } = await fetchDisplayGames(leagueKey);
+    renderTicker(displayGames);
 
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const isPastDateSearch = Boolean(specificDate) && specificDate < todayIso;
+    const live = displayGames.filter((g) => g.status === 'live');
+    const finished = displayGames.filter((g) => g.status === 'final');
 
-    // Si se busca una fecha pasada, se fuerza status='final' en una copia de
-    // cada juego (sin mutar el original). Así toda la lógica de abajo
-    // (etiqueta, si se muestra el diamante, agrupación) es consistente, sin
-    // importar qué status haya quedado guardado por error en el backend.
-    const displayGames = isPastDateSearch ? games.map((g) => ({ ...g, status: 'final' })) : games;
-
-    renderTicker(isPastDateSearch ? [] : displayGames);
-
-    if (!displayGames.length) {
+    if (!live.length && !finished.length) {
       container.innerHTML = `<p class="empty-state">${t('common.noGamesToday')}</p>`;
       stopLivePolling();
       return;
     }
 
-    // Organizados por estado: en vivo primero (lo más urgente), luego los
-    // que faltan por jugar (para predecir), y al final los ya terminados.
-    const live = displayGames.filter((g) => g.status === 'live');
+    container.innerHTML =
+      (await renderGameGroup('sections.liveNow', live)) +
+      (await renderGameGroup('sections.finished', finished));
+    startLivePolling(live.map((g) => g.id));
+  } catch (err) {
+    container.innerHTML = `<p class="empty-state">${t('common.error')}</p>`;
+  }
+}
+
+async function renderCalendarSection(leagueKey, specificDate = null) {
+  const container = document.getElementById('calendar-container');
+  container.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
+  try {
+    const { displayGames, isPastDateSearch } = await fetchDisplayGames(leagueKey, specificDate);
+    if (!isPastDateSearch) renderTicker(displayGames);
+
+    if (!displayGames.length) {
+      container.innerHTML = `<p class="empty-state">${t('common.noGamesToday')}</p>`;
+      return;
+    }
+
     const upcoming = displayGames.filter((g) => g.status === 'scheduled');
     const finished = displayGames.filter((g) => g.status === 'final');
+    const groups = specificDate
+      ? (await renderGameGroup('sections.finished', finished)) +
+        (await renderGameGroup('sections.upcoming', upcoming))
+      : await renderGameGroup('sections.upcoming', upcoming);
 
-    const html =
-      (await renderGameGroup('sections.liveNow', live)) +
-      (await renderGameGroup('sections.upcoming', upcoming)) +
-      (await renderGameGroup('sections.finished', finished));
-
-    container.innerHTML = html;
+    container.innerHTML = groups || `<p class="empty-state">${t('common.noGamesToday')}</p>`;
     attachPredictionHandlers(container);
-    startLivePolling(live.map((g) => g.id));
   } catch (err) {
     container.innerHTML = `<p class="empty-state">${t('common.error')}</p>`;
   }
@@ -427,6 +450,84 @@ function attachPredictionHandlers(container) {
       }
     });
   });
+}
+
+/* ---------------------- Postemporada (bracket) ---------------------- */
+function renderSeriesCard(series) {
+  const roundName = t(`postseason.${series.round}`);
+  const teamRows = series.teams
+    .map(
+      (tm, idx) => `
+      <div class="series-team ${idx === 0 ? 'top-seed' : ''}">
+        ${tm.logo_url ? `<img src="${esc(safeImg(tm.logo_url))}" alt="" loading="lazy" decoding="async">` : ''}
+        <span class="series-seed">${tm.seed != null ? esc(tm.seed) : ''}</span>
+        <span class="series-team-name">${esc(tm.abbreviation || tm.name)}</span>
+        <span class="series-wins">${Number(tm.wins)}</span>
+      </div>`
+    )
+    .join('');
+  const gamesRows = (series.games || [])
+    .map((g) => {
+      const label =
+        g.status === 'final'
+          ? `${esc(g.away_abbreviation)} ${g.away_score ?? 0} · ${g.home_score ?? 0} ${esc(g.home_abbreviation)}`
+          : g.status === 'live'
+            ? `${esc(g.away_abbreviation)} ${g.away_score ?? 0} · ${g.home_score ?? 0} ${esc(g.home_abbreviation)} ●`
+            : esc(formatDate(g.date));
+      return `<div class="series-game ${esc(g.status)}">${label}</div>`;
+    })
+    .join('');
+  return `
+    <div class="series-card">
+      <div class="series-round">${esc(roundName)} · ${t('postseason.bestOf')} ${Number(series.best_of)}</div>
+      ${teamRows}
+      ${series.leader_text ? `<div class="series-leader">${esc(series.leader_text)}</div>` : ''}
+      <div class="series-games">${gamesRows}</div>
+    </div>`;
+}
+
+function renderLeagueBracket(seriesList) {
+  const rounds = ['WC', 'DS', 'CS'];
+  return rounds
+    .map((r) => {
+      const items = seriesList.filter((s) => s.round === r);
+      if (!items.length) return '';
+      return `
+        <div class="bracket-round">
+          <h4 class="bracket-round-title">${esc(t(`postseason.${r}`))}</h4>
+          ${items.map(renderSeriesCard).join('')}
+        </div>`;
+    })
+    .join('');
+}
+
+async function renderPostseason() {
+  const container = document.getElementById('postseason-container');
+  container.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
+  try {
+    const data = await api.get('/postseason/bracket');
+    if (!data.postseason_active) {
+      container.innerHTML = `<p class="empty-state">${t('postseason.notActive')}</p>`;
+      return;
+    }
+    container.innerHTML = `
+      <div class="bracket-grid">
+        <div class="bracket-side">
+          <h3 class="bracket-league-title">AL · American League</h3>
+          ${renderLeagueBracket(data.al || [])}
+        </div>
+        <div class="bracket-center">
+          <h3 class="bracket-league-title">${esc(t('postseason.WS'))}</h3>
+          ${data.world_series ? renderSeriesCard(data.world_series) : `<p class="empty-state">${t('postseason.notActive')}</p>`}
+        </div>
+        <div class="bracket-side">
+          <h3 class="bracket-league-title">NL · National League</h3>
+          ${renderLeagueBracket(data.nl || [])}
+        </div>
+      </div>`;
+  } catch (err) {
+    container.innerHTML = `<p class="empty-state">${t('common.error')}</p>`;
+  }
 }
 
 /* ---------------------- Favoritos ---------------------- */
@@ -469,77 +570,46 @@ async function toggleFavorite(star, type, id) {
   }
 }
 
-/* ---------------------- Carga de la liga (MLB) ----------------------
-   Carga por secciones para velocidad: los partidos (lo urgente) se piden
-   de inmediato; posiciones, jugadores de hoy y noticias se cargan de forma
-   diferida cuando el usuario hace scroll hasta ellas (IntersectionObserver,
-   una sola vez por sección). Así la primera pintura solo espera 1 request
-   en vez de 4+ (noticias + partidos + posiciones + hasta 6 detalles). */
-const lazyLoadedSections = new Set();
-let lazyObserver = null;
+/* ---------------------- Vistas (una sección a la vez) ----------------------
+   La página se divide en vistas con botones: En vivo, Calendario,
+   Posiciones, Postemporada, Noticias y Estadísticas. Cada vista carga su
+   contenido la primera vez que se muestra (rápido al entrar: solo En vivo).
+   La vista de noticias incluye el complemento "Jugadores Hoy". */
+const loadedViews = new Set();
+let activeView = 'live';
 
-function observeLazySections(leagueKey) {
-  if (lazyObserver) lazyObserver.disconnect();
+const VIEW_LOADERS = {
+  live: () => renderLiveSection(activeLeague),
+  calendar: () => renderCalendarSection(activeLeague, document.getElementById('games-date-input')?.value || null),
+  standings: () => renderStandings(activeLeague),
+  postseason: () => renderPostseason(),
+  news: () => Promise.all([renderNews(SPORT_KEY), renderPlayersToday(activeLeague)]),
+  stats: () => Promise.resolve(),
+};
 
-  const jobs = {
-    'standings-section': () => renderStandings(leagueKey),
-    'players-today-section': () => renderPlayersToday(leagueKey),
-    'news-section': () => renderNews(SPORT_KEY),
-  };
-
-  if (!('IntersectionObserver' in window)) {
-    // Sin soporte: carga todo de una vez (comportamiento anterior).
-    Object.values(jobs).forEach((load) => load());
+function showView(name) {
+  if (!VIEW_LOADERS[name]) return;
+  activeView = name;
+  document.querySelectorAll('.view-tab').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.view === name);
+  });
+  document.querySelectorAll('[data-view-section]').forEach((section) => {
+    section.classList.toggle('hidden', section.dataset.viewSection !== name);
+  });
+  // El polling en vivo solo tiene sentido en su vista.
+  if (name !== 'live') stopLivePolling();
+  if (loadedViews.has(name)) {
+    if (name === 'live') renderLiveSection(activeLeague);
     return;
   }
-
-  lazyObserver = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        const id = entry.target.id;
-        if (lazyLoadedSections.has(id)) continue;
-        lazyLoadedSections.add(id);
-        lazyObserver.unobserve(entry.target);
-        jobs[id]?.();
-      }
-    },
-    { rootMargin: '400px 0px' } // precarga un poco antes de llegar
-  );
-
-  for (const id of Object.keys(jobs)) {
-    const el = document.getElementById(id);
-    if (!el) continue;
-    if (lazyLoadedSections.has(id)) {
-      jobs[id]();
-    } else {
-      showSectionPlaceholder(id);
-      lazyObserver.observe(el);
-    }
-  }
+  loadedViews.add(name);
+  VIEW_LOADERS[name]();
 }
 
-// Mientras la sección diferida no carga, muestra su esqueleto en vez de vacío.
-function showSectionPlaceholder(id) {
-  const containers = {
-    'standings-section': 'standings-container',
-    'players-today-section': 'players-today-container',
-    'news-section': 'news-container',
-  };
-  const el = document.getElementById(containers[id]);
-  if (el && !el.innerHTML.trim()) {
-    el.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
-  }
-}
-
-async function loadLeagueData(leagueKey = LEAGUE_KEY) {
-  activeLeague = leagueKey;
-  const dateInput = document.getElementById('games-date-input');
-  if (dateInput) dateInput.value = '';
-
-  lazyLoadedSections.clear();
-  observeLazySections(leagueKey);
-  await renderGamesSection(leagueKey);
+function initViewNav() {
+  document.querySelectorAll('.view-tab').forEach((tab) => {
+    tab.addEventListener('click', () => showView(tab.dataset.view));
+  });
 }
 
 function initDateSearch() {
@@ -547,40 +617,49 @@ function initDateSearch() {
   const todayBtn = document.getElementById('games-date-today');
 
   dateInput.addEventListener('change', (e) => {
-    if (e.target.value) renderGamesSection(activeLeague, e.target.value);
+    if (e.target.value) renderCalendarSection(activeLeague, e.target.value);
   });
 
   todayBtn.addEventListener('click', () => {
     dateInput.value = '';
-    renderGamesSection(activeLeague);
+    renderCalendarSection(activeLeague);
   });
 }
 
 async function loadMainContent() {
   resetStatsSearch();
-  await loadLeagueData(LEAGUE_KEY);
+  activeLeague = LEAGUE_KEY;
+  const dateInput = document.getElementById('games-date-input');
+  if (dateInput) dateInput.value = '';
+  loadedViews.clear();
+  showView('live');
 }
 
-document.addEventListener('bfb:language-changed', () => loadMainContent());
+document.addEventListener('bfb:language-changed', () => {
+  // Recarga la vista actual en el nuevo idioma; las demás se recargarán
+  // cuando se visiten (loadedViews se limpia).
+  loadedViews.clear();
+  showView(activeView);
+});
 
 // Tras login/logout/registro el estado de usuario cambia: las tarjetas ya
 // pintadas (botones de predecir, estrellas de favorito) quedarían con el
-// estado anterior. Se re-renderizan partidos + posiciones de la liga activa
-// (noticias/stats no dependen de la sesión).
+// estado anterior. Se re-renderizan las vistas cargadas que dependen de
+// la sesión (noticias/stats no).
 document.addEventListener('bfb:user-changed', () => {
   if (!activeLeague) return;
-  const dateInput = document.getElementById('games-date-input');
-  renderGamesSection(activeLeague, dateInput?.value || null);
-  // Posiciones solo si ya se cargaron (si no, se pintarán con la sesión
-  // correcta cuando el usuario llegue a la sección).
-  if (lazyLoadedSections.has('standings-section')) {
-    renderStandings(activeLeague);
+  if (loadedViews.has('live')) renderLiveSection(activeLeague);
+  if (loadedViews.has('calendar')) {
+    const dateInput = document.getElementById('games-date-input');
+    renderCalendarSection(activeLeague, dateInput?.value || null);
   }
+  if (loadedViews.has('standings')) renderStandings(activeLeague);
 });
 
 async function initApp() {
   await initI18n();
   initAuth();
+  initViewNav();
   initDateSearch();
   initStatsSearch();
   await loadMainContent();

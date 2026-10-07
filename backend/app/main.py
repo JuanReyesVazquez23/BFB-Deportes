@@ -8,7 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routes import admin, auth, favorites, games, leagues, news, predictions, stats
+from app.api.routes import admin, auth, favorites, games, leagues, news, postseason, predictions, stats
 from app.core.config import settings
 from app.core.database import Base, SessionLocal, engine
 from app.core.migrations import run_lightweight_migrations
@@ -136,6 +136,7 @@ app.include_router(favorites.router, prefix=settings.API_V1_PREFIX)
 app.include_router(predictions.router, prefix=settings.API_V1_PREFIX)
 app.include_router(stats.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)
+app.include_router(postseason.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/api/health")

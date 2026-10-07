@@ -71,6 +71,26 @@ async def get_live_feed(game_pk: int) -> dict:
         return resp.json()
 
 
+async def get_postseason_schedule(season: int) -> dict:
+    """
+    Todos los juegos de postemporada (Wild Card, Divisionales, Campeonato y
+    Serie Mundial) de la temporada. gameType: F = Wild Card, D = Division,
+    L = League Championship, W = World Series. Con seriesStatus hidratado
+    (marcador de la serie: quién va ganando y por cuánto).
+    """
+    url = f"{settings.MLB_STATS_API_BASE}/schedule"
+    params = {
+        "sportId": MLB_SPORT_ID,
+        "season": season,
+        "gameType": "F,D,L,W",
+        "hydrate": "seriesStatus,team",
+    }
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        resp = await client.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+
 def extract_live_situation(live_feed: dict) -> dict:
     """
     Extrae la situación de juego en vivo (bases, outs, bateador, pitcher,

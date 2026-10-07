@@ -22,7 +22,24 @@
     "liveNow": "Live Now",
     "upcoming": "Upcoming Games",
     "finished": "Finished",
-    "stats": "Statistics"
+    "stats": "Statistics",
+    "postseason": "Postseason"
+  },
+  "views": {
+    "live": "Live",
+    "calendar": "Schedule",
+    "standings": "Standings",
+    "postseason": "Postseason",
+    "news": "News",
+    "stats": "Stats"
+  },
+  "postseason": {
+    "WC": "Wild Card",
+    "DS": "Division Series",
+    "CS": "Championship Series",
+    "WS": "World Series",
+    "bestOf": "Best of",
+    "notActive": "No postseason yet this season. Check back in October."
   },
   "game": {
     "live": "Live",

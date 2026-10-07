@@ -22,7 +22,24 @@
     "liveNow": "En Vivo Ahora",
     "upcoming": "Próximos Partidos",
     "finished": "Finalizados",
+    "stats": "Estadísticas",
+    "postseason": "Postemporada"
+  },
+  "views": {
+    "live": "En vivo",
+    "calendar": "Calendario",
+    "standings": "Posiciones",
+    "postseason": "Postemporada",
+    "news": "Noticias",
     "stats": "Estadísticas"
+  },
+  "postseason": {
+    "WC": "Comodín",
+    "DS": "Series Divisionales",
+    "CS": "Series de Campeonato",
+    "WS": "Serie Mundial",
+    "bestOf": "Mejor de",
+    "notActive": "Todavía no hay postemporada esta temporada. Vuelve en octubre."
   },
   "game": {
     "live": "En vivo",

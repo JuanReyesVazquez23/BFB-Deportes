@@ -23,7 +23,7 @@
 
   <!-- Cache-busting: sube el número ?v= en CSS/JS cada vez que cambien,
        para que el navegador no siga usando una versión vieja cacheada. -->
-  <link rel="stylesheet" href="dist/styles.min.css?v=20261010">
+  <link rel="stylesheet" href="dist/styles.min.css?v=20261011">
 </head>
 <body>
 
@@ -58,30 +58,54 @@
     <div class="live-ticker-track" id="ticker-track"></div>
   </div>
 
+  <!-- Navegación por vistas: cada botón muestra una sección (carga diferida) -->
+  <nav class="view-nav container" aria-label="Secciones">
+    <button class="view-tab active" data-view="live" data-i18n="views.live">En vivo</button>
+    <button class="view-tab" data-view="calendar" data-i18n="views.calendar">Calendario</button>
+    <button class="view-tab" data-view="standings" data-i18n="views.standings">Posiciones</button>
+    <button class="view-tab" data-view="postseason" data-i18n="views.postseason">Postemporada</button>
+    <button class="view-tab" data-view="news" data-i18n="views.news">Noticias</button>
+    <button class="view-tab" data-view="stats" data-i18n="views.stats">Estadísticas</button>
+  </nav>
+
   <main class="container">
 
-    <!-- 01 — Lo urgente primero: partidos en vivo, resultados y próximos para predecir -->
-    <section class="section" id="games-section">
+    <!-- En vivo y finalizados de la ventana actual -->
+    <section class="section" id="live-section" data-view-section="live">
       <h2 class="section-title">
         <span data-i18n="sections.liveAndResults">En Vivo y Resultados</span>
         <small data-i18n="game.predict">Predice y gana puntos Strike</small>
+      </h2>
+      <div id="live-container"></div>
+    </section>
+
+    <!-- Calendario: búsqueda por fecha + próximos para predecir -->
+    <section class="section hidden" id="calendar-section" data-view-section="calendar">
+      <h2 class="section-title">
+        <span data-i18n="sections.upcoming">Próximos Partidos</span>
       </h2>
       <div class="date-search-row">
         <label for="games-date-input" data-i18n="game.searchByDate">Buscar por fecha:</label>
         <input type="date" id="games-date-input">
         <button type="button" class="btn btn-outline btn-small" id="games-date-today" data-i18n="game.today">Hoy</button>
       </div>
-      <div id="games-container"></div>
+      <div id="calendar-container"></div>
     </section>
 
     <!-- 02 — Posiciones -->
-    <section class="section" id="standings-section">
+    <section class="section hidden" id="standings-section" data-view-section="standings">
       <h2 class="section-title" data-i18n="sections.standings">Posiciones</h2>
       <div id="standings-container"></div>
     </section>
 
+    <!-- Postemporada: bracket en vivo -->
+    <section class="section hidden" id="postseason-section" data-view-section="postseason">
+      <h2 class="section-title" data-i18n="sections.postseason">Postemporada</h2>
+      <div id="postseason-container"></div>
+    </section>
+
     <!-- 03 — Estadísticas -->
-    <section class="section" id="stats-section">
+    <section class="section hidden" id="stats-section" data-view-section="stats">
       <h2 class="section-title" data-i18n="sections.stats">Estadísticas</h2>
       <div class="stats-search">
         <select id="stats-type" aria-label="Tipo de estadística">
@@ -107,7 +131,7 @@
     </section>
 
     <!-- 04 — Contenido secundario: noticias + jugadores de hoy -->
-    <section class="section" id="news-section">
+    <section class="section hidden" id="news-section" data-view-section="news">
       <div class="split-layout">
         <div class="split-main">
           <h2 class="section-title" data-i18n="sections.generalNews">Noticias Generales</h2>
@@ -198,6 +222,6 @@
 
   <!-- Bundle único minificado (generado con esbuild desde js/*.js, mismo
        orden): 1 request en vez de 9. Ver frontend/dist/README. -->
-  <script src="dist/app.bundle.min.js?v=20261010"></script>
+  <script src="dist/app.bundle.min.js?v=20261011"></script>
 </body>
 </html>
