@@ -319,43 +319,21 @@
   .ps-live-dot { animation: none; }
 }
 
+/* En móvil el gráfico se encaja al ancho (sin paneo): el SVG escala solo
+   por su viewBox. El detalle juego-por-juego queda debajo. */
 @media (max-width: 800px) {
-  .ps-hint { display: block; }
-}
-
-/* Mini-bracket vertical (móvil): el cuadro completo sin paneo horizontal.
-   Reemplaza al SVG con scroll y al detalle juego-por-juego. */
-.ps-mini {
-  display: none;
-}
-
-@media (max-width: 800px) {
-  .ps-scroll,
-  .ps-hint,
-  .ps-detail-title,
-  .ps-detail-grid {
+  .ps-hint {
     display: none;
   }
 
-  .ps-mini {
-    display: grid;
-    gap: 20px;
+  .ps-scroll {
+    overflow-x: visible;
+    padding: 4px;
   }
 
-  .ps-mini-league-title {
-    font-family: var(--font-display);
-    font-size: 16px;
-    letter-spacing: 0.03em;
-    margin: 0 0 10px;
-    color: var(--bfb-yellow);
-  }
-
-  .ps-mini .series-card {
-    padding: 12px 14px;
-  }
-
-  .ps-mini .series-games {
-    display: none;
+  .ps-svg {
+    min-width: 0;
+    width: 100%;
   }
 }
 

@@ -665,35 +665,6 @@ function renderSeriesDetails(data) {
     <div class="ps-detail-grid">${all.map(renderSeriesCard).join('')}</div>`;
 }
 
-/* Mini-bracket vertical para móvil: las mismas series en tarjetas
-   compactas (sin filas de juegos), legible sin paneo horizontal.
-   Las series aún sin equipos definidos (TBD) se ocultan. */
-function psMiniHasTeams(series) {
-  return ((series.teams || []).filter(Boolean).length >= 2);
-}
-
-function renderBracketMini(data) {
-  const order = ['WC', 'DS', 'CS'];
-  const leagueBlock = (leagueKey, list) => {
-    const cards = order
-      .map((r) => (list || []).filter((s) => s.round === r && psMiniHasTeams(s)).map(renderSeriesCard).join(''))
-      .join('');
-    if (!cards) return '';
-    return `
-      <div class="ps-mini-league">
-        <h4 class="ps-mini-league-title">${esc(t(`postseason.${leagueKey}`))}</h4>
-        ${cards}
-      </div>`;
-  };
-  const ws = data.world_series && psMiniHasTeams(data.world_series) ? renderSeriesCard(data.world_series) : '';
-  return `
-    <div class="ps-mini">
-      ${leagueBlock('AL', data.al)}
-      ${ws ? `<div class="ps-mini-league"><h4 class="ps-mini-league-title">${esc(t('postseason.WS'))}</h4>${ws}</div>` : ''}
-      ${leagueBlock('NL', data.nl)}
-    </div>`;
-}
-
 async function renderPostseason(silent = false) {
   const container = document.getElementById('postseason-container');
   if (!container) return;
@@ -722,7 +693,6 @@ async function renderPostseason(silent = false) {
       ${champ ? `<div class="ps-champion">🏆 ${esc(t('postseason.champion'))}: ${champ.logo_url ? `<img src="${esc(safeImg(champ.logo_url))}" alt="" decoding="async">` : ''}<strong>${esc(champ.name || champ.abbreviation)}</strong></div>` : ''}
       <p class="ps-hint">${esc(t('postseason.scrollHint'))}</p>
       <div class="ps-scroll">${renderBracketSvg(data)}</div>
-      ${renderBracketMini(data)}
       ${renderSeriesDetails(data)}`;
 
     const scroller = container.querySelector('.ps-scroll');
