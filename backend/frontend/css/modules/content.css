@@ -319,21 +319,22 @@
   .ps-live-dot { animation: none; }
 }
 
-/* En móvil el gráfico se encaja al ancho (sin paneo): el SVG escala solo
-   por su viewBox. El detalle juego-por-juego queda debajo. */
+/* En móvil el gráfico se muestra más grande (~1.8x): el paneo queda
+   confinado dentro de su contenedor, la página nunca se desborda. */
 @media (max-width: 800px) {
   .ps-hint {
-    display: none;
+    display: block;
   }
 
   .ps-scroll {
-    overflow-x: visible;
-    padding: 4px;
+    overflow-x: auto;
+    padding: 8px;
   }
 
   .ps-svg {
-    min-width: 0;
-    width: 100%;
+    min-width: 620px;
+    width: 620px;
+    max-width: none;
   }
 }
 
