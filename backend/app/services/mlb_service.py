@@ -91,6 +91,26 @@ async def get_postseason_schedule(season: int) -> dict:
         return resp.json()
 
 
+async def get_stat_leaders(season: int, category: str, limit: int = 5) -> dict:
+    """
+    Líderes de la temporada en una categoría (ej. homeRuns, saves).
+    OJO: no pedir promedios sin mínimo calificatorio (battingAverage
+    devuelve pitchers con 2 turnos); solo categorías de conteo + ERA,
+    que sí salen cuerdas. Ver LEADER_CATEGORIES en routes/stats.py.
+    """
+    url = f"{settings.MLB_STATS_API_BASE}/stats/leaders"
+    params = {
+        "leaderCategories": category,
+        "sportId": MLB_SPORT_ID,
+        "season": season,
+        "limit": limit,
+    }
+    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        resp = await client.get(url, params=params)
+        resp.raise_for_status()
+        return resp.json()
+
+
 def extract_live_situation(live_feed: dict) -> dict:
     """
     Extrae la situación de juego en vivo (bases, outs, bateador, pitcher,

@@ -23,13 +23,15 @@
     "upcoming": "Upcoming Games",
     "finished": "Finished",
     "stats": "Statistics",
-    "postseason": "Postseason"
+    "postseason": "Postseason",
+    "leaders": "Leaders"
   },
   "views": {
     "live": "Live",
     "calendar": "Schedule",
     "standings": "Standings",
     "postseason": "Postseason",
+    "leaders": "Leaders",
     "news": "News",
     "stats": "Stats"
   },

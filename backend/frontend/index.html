@@ -64,6 +64,7 @@
     <button class="view-tab" data-view="calendar" data-i18n="views.calendar">Calendario</button>
     <button class="view-tab" data-view="standings" data-i18n="views.standings">Posiciones</button>
     <button class="view-tab" data-view="postseason" data-i18n="views.postseason">Postemporada</button>
+    <button class="view-tab" data-view="leaders" data-i18n="views.leaders">Líderes</button>
     <button class="view-tab" data-view="news" data-i18n="views.news">Noticias</button>
     <button class="view-tab" data-view="stats" data-i18n="views.stats">Estadísticas</button>
   </nav>
@@ -128,6 +129,12 @@
       </label>
       <div class="stats-compare-status hidden" id="stats-compare-status"></div>
       <div class="stats-result" id="stats-result"></div>
+    </section>
+
+    <!-- Líderes de la temporada (contenido de offseason) -->
+    <section class="section hidden" id="leaders-section" data-view-section="leaders">
+      <h2 class="section-title" data-i18n="sections.leaders">Líderes</h2>
+      <div id="leaders-container"></div>
     </section>
 
     <!-- 04 — Contenido secundario: noticias + jugadores de hoy -->

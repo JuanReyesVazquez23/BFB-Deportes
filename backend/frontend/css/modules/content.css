@@ -338,6 +338,83 @@
   }
 }
 
+/* ---------- Líderes de la temporada ---------- */
+.leaders-group-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--bfb-yellow);
+  margin: 24px 0 12px;
+}
+
+.leaders-group-title:first-child {
+  margin-top: 0;
+}
+
+.leaders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.leader-card {
+  background: var(--surface-gradient);
+  border: 1px solid var(--bfb-border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-card);
+}
+
+.leader-title {
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+
+.leader-row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--bfb-border);
+  font-size: 13px;
+}
+
+.leader-row:last-child {
+  border-bottom: none;
+}
+
+.leader-rank {
+  font-family: var(--font-mono);
+  color: var(--bfb-muted);
+  font-size: 12px;
+}
+
+.leader-name {
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leader-team {
+  font-size: 11px;
+  color: var(--bfb-muted);
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leader-value {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--bfb-yellow);
+}
+
 /* ---------- Tabla de posiciones ---------- */
 .standings-group-title {
   font-family: var(--font-mono);

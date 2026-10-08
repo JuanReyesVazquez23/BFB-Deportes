@@ -23,13 +23,15 @@
     "upcoming": "Próximos Partidos",
     "finished": "Finalizados",
     "stats": "Estadísticas",
-    "postseason": "Postemporada"
+    "postseason": "Postemporada",
+    "leaders": "Líderes"
   },
   "views": {
     "live": "En vivo",
     "calendar": "Calendario",
     "standings": "Posiciones",
     "postseason": "Postemporada",
+    "leaders": "Líderes",
     "news": "Noticias",
     "stats": "Estadísticas"
   },

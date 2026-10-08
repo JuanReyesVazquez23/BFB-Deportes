@@ -663,6 +663,60 @@ async function renderPostseason(silent = false) {
   }
 }
 
+/* ---------------------- Líderes de la temporada ----------------------
+   Contenido de offseason: tablas de líderes de bateo y pitcheo con datos
+   reales de MLB Stats API (ver GET /stats/leaders). */
+const LEADER_LABEL_KEYS = {
+  homeRuns: 'stats.homeRuns',
+  runsBattedIn: 'stats.rbi',
+  stolenBases: 'stats.stolenBases',
+  wins: 'stats.wins',
+  earnedRunAverage: 'stats.era',
+  strikeouts: 'stats.strikeouts',
+  saves: 'stats.saves',
+};
+
+function renderLeaderTable(category, leaders) {
+  const rows = (leaders || [])
+    .map(
+      (l) => `
+      <div class="leader-row">
+        <span class="leader-rank">${l.rank != null ? esc(l.rank) : ''}</span>
+        <span class="leader-name">${esc(l.name)}</span>
+        <span class="leader-team">${esc(l.team)}</span>
+        <span class="leader-value">${esc(l.value)}</span>
+      </div>`
+    )
+    .join('');
+  return `
+    <div class="leader-card">
+      <h4 class="leader-title">${esc(t(LEADER_LABEL_KEYS[category] || category))}</h4>
+      ${rows || `<p class="empty-state">${t('common.noGamesToday')}</p>`}
+    </div>`;
+}
+
+async function renderLeaders() {
+  const container = document.getElementById('leaders-container');
+  container.innerHTML = `<p class="empty-state">${t('common.loading')}</p>`;
+  try {
+    const data = await api.get('/stats/leaders');
+    const groups = data.groups || {};
+    const batting = groups.hitting || {};
+    const pitching = groups.pitching || {};
+    container.innerHTML = `
+      <h3 class="leaders-group-title">${esc(data.season)} · ${esc(t('stats.battingStats'))}</h3>
+      <div class="leaders-grid">
+        ${Object.entries(batting).map(([cat, leaders]) => renderLeaderTable(cat, leaders)).join('')}
+      </div>
+      <h3 class="leaders-group-title">${esc(data.season)} · ${esc(t('stats.pitchingStats'))}</h3>
+      <div class="leaders-grid">
+        ${Object.entries(pitching).map(([cat, leaders]) => renderLeaderTable(cat, leaders)).join('')}
+      </div>`;
+  } catch (err) {
+    container.innerHTML = `<p class="empty-state">${t('common.error')}</p>`;
+  }
+}
+
 /* ---------------------- Favoritos ---------------------- */
 async function markFavoriteStars(container) {
   if (!window.currentUser) return;
@@ -716,6 +770,7 @@ const VIEW_LOADERS = {
   calendar: () => renderCalendarSection(activeLeague, document.getElementById('games-date-input')?.value || null),
   standings: () => renderStandings(activeLeague),
   postseason: () => renderPostseason(),
+  leaders: () => renderLeaders(),
   news: () => Promise.all([renderNews(SPORT_KEY), renderPlayersToday(activeLeague)]),
   stats: () => Promise.resolve(),
 };

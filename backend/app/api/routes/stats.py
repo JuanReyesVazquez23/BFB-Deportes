@@ -1,4 +1,7 @@
 from datetime import datetime, timezone
+import asyncio
+import logging
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from sqlalchemy.orm import Session, joinedload
@@ -8,7 +11,19 @@ from app.core.rate_limit import enforce_rate_limit
 from app.models.sport import Game, League, Player, Sport, Team
 from app.services import mlb_service
 
+logger = logging.getLogger("bfb.stats")
+
 router = APIRouter(prefix="/stats", tags=["stats"])
+
+# Categorías verificadas contra la API real (oct-2026): solo conteo + ERA.
+# battingAverage se excluye a propósito (sin mínimo de turnos devuelve pitchers).
+LEADER_CATEGORIES = {
+    "hitting": ["homeRuns", "runsBattedIn", "stolenBases"],
+    "pitching": ["wins", "earnedRunAverage", "strikeouts", "saves"],
+}
+
+_leaders_cache: dict = {"expires_at": 0.0, "payload": None}
+LEADERS_TTL_SECONDS = 1800  # 30 min: en offseason casi no cambian
 
 
 def _escape_like(value: str) -> str:
@@ -76,6 +91,56 @@ def search_entities(
         }
         for t in matches
     ]
+
+
+@router.get("/leaders")
+async def season_leaders(
+    request: Request,
+    season: int | None = Query(default=None, ge=2000, le=2100),
+):
+    """
+    Líderes de la temporada (bateo y pitcheo) para el contenido de
+    offseason. 7 llamadas a MLB en el peor caso, cacheadas 30 minutos.
+    """
+    enforce_rate_limit(request, bucket="stats_leaders", limit=10, window_seconds=60)
+
+    year = season or datetime.now(timezone.utc).year
+    now = time.monotonic()
+    if _leaders_cache["payload"] is not None and _leaders_cache["expires_at"] > now:
+        cached = _leaders_cache["payload"]
+        if cached.get("season") == year:
+            return cached
+
+    groups: dict[str, dict] = {}
+    try:
+        # En paralelo: 7 llamadas secuenciales tardaban ~9s.
+        pairs = [(group, category) for group, categories in LEADER_CATEGORIES.items() for category in categories]
+        raws = await asyncio.gather(
+            *[mlb_service.get_stat_leaders(year, category, limit=5) for _, category in pairs]
+        )
+        for (group, category), raw in zip(pairs, raws):
+            leaders = (raw.get("leagueLeaders") or [{}])[0].get("leaders", [])
+            groups.setdefault(group, {})[category] = [
+                {
+                    "rank": entry.get("rank"),
+                    "name": (entry.get("person") or {}).get("fullName", ""),
+                    "team": (entry.get("team") or {}).get("name", ""),
+                    "team_id": (entry.get("team") or {}).get("id"),
+                    "value": entry.get("value"),
+                }
+                for entry in leaders
+            ]
+    except Exception:
+        logger.exception("No se pudieron obtener los líderes %d.", year)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="No se pudieron obtener los líderes de la temporada.",
+        )
+
+    payload = {"season": year, "groups": groups}
+    _leaders_cache["payload"] = payload
+    _leaders_cache["expires_at"] = now + LEADERS_TTL_SECONDS
+    return payload
 
 
 def _build_team_profile(team_id: int, db: Session) -> dict:
