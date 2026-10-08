@@ -34,6 +34,12 @@ window.addEventListener('appinstalled', () => {
 });
 
 function initInstallBanner() {
+  // Service Worker: requisito para que Chrome dispare beforeinstallprompt
+  // y para el respaldo sin conexión (ver sw.js). Si falla, la página
+  // sigue funcionando normal, solo no será instalable.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
   document.getElementById('install-app-btn')?.addEventListener('click', async () => {
     if (!deferredInstallPrompt) return;
     deferredInstallPrompt.prompt();
