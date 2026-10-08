@@ -7,7 +7,9 @@
 
 ## Cómo regenerar tras editar `js/` o `css/`
 
-Con `npx` (descarga esbuild una vez, sin instalar nada en el repo):
+Versión fijada: **esbuild 0.28.2** (siempre la misma, para que el bundle
+salga byte-idéntico desde cualquier máquina). Con `npx`, sin instalar
+nada en el repo:
 
 ```bash
 cd backend/frontend
@@ -19,8 +21,8 @@ Path('_bundle_src.js').write_text(
     '\n'.join((Path('js')/f).read_text(encoding='utf-8') for f in order),
     encoding='utf-8')
 EOF
-npx -y esbuild _bundle_src.js --minify --outfile=dist/app.bundle.min.js
-npx -y esbuild css/styles.css --bundle --minify --outfile=dist/styles.min.css
+npx -y esbuild@0.28.2 _bundle_src.js --minify --outfile=dist/app.bundle.min.js
+npx -y esbuild@0.28.2 css/styles.css --bundle --minify --outfile=dist/styles.min.css
 rm _bundle_src.js
 node --check dist/app.bundle.min.js
 ```
